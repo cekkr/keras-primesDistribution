@@ -190,7 +190,9 @@ class Agent:
 
       game.reset()
 
+      lastCalculatedLine = 0
       maxScore = 0
+
       cycles = 0
       game_over = False
       while not game_over:
@@ -211,20 +213,11 @@ class Agent:
         if game.inNewLine:
           score = game.get_score()
 
-          views = []
-          targets = []
+          if game.lastCalculatedScoreLine != lastCalculatedLine:
+            lastCalculatedLine = game.lastCalculatedScoreLine
 
-          if score <= maxScore:
-            for i in range(0, game.lastLineLen):
-              view = game.get_state(i * -1)
-              views.append(view)
-              targets.append(score)
-          else:
-            # Train the entire schema
-            for i in range(0, game.countInstructionsElements()):
-              view = game.get_state(i)
-              views.append(view)
-              targets.append(score)
+            views = []
+            targets = []
 
             # Train only the working algorithm
             isolatedInstructions = game.extractWinnerVarInstructions()
@@ -233,14 +226,25 @@ class Agent:
               views.append(view)
               targets.append(score)
 
-            maxScore = score
+            # Train the working algorithm through the total script
+            totElements = 0
+            for i in range(0, len(game.instructions)):
+              instr = game.instructions[i]
+              instrLen = len(instr)
+              if i in game.workingLines:
+                for u in range(totElements, totElements+instrLen):
+                  view = game.get_state(u)
+                  views.append(view)
+                  targets.append(score)
 
-          views = np.array(views)
-          targets = np.array(targets)
+              totElements += instrLen
 
-          train = model.train_on_batch(views, targets)
-          loss += float(train)
-          # accuracy += float(train[1])
+            views = np.array(views)
+            targets = np.array(targets)
+
+            train = model.train_on_batch(views, targets)
+            loss += float(train)
+            # accuracy += float(train[1])
 
         if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
           model.save_weights(self.fileWeights)
@@ -1239,7 +1243,7 @@ class Calculon(Game):
     return self.currentReward
 
   def extractWinnerVarInstructions(self):
-    wv = self.winnerVar
+    wv = self.lastCalculatedBoolVar
 
     startFrom = len(self.instructions)
     while startFrom > 0:
@@ -1276,6 +1280,7 @@ class Calculon(Game):
 
       ass.insert(0, var[1])
 
+    self.workingLines = []
     i = startFrom
 
     def stack():
@@ -1284,6 +1289,7 @@ class Calculon(Game):
       nonlocal instructions
 
       stackInstructions = []
+      stackWorkingLines = []
       stackIsRelevant = False
 
       stackLen = 0
@@ -1295,10 +1301,12 @@ class Calculon(Game):
         assign = None
         vars = []
 
+        relevant = False
         endOfStack = False
         isAssign = True
         isVar = False
         lastVarType = ''
+        isCondition = False
         for field in instr:
           if isVar:
             vars.append([lastVarType, field])
@@ -1314,20 +1322,22 @@ class Calculon(Game):
             if isAssign:
               # Check stack
               if field == 'END':
+                stackWorkingLines.append(i+1)
                 stack()
               elif field == 'IF':
-                stackInstructions.insert(0, instr.copy())
+                relevant = stackIsRelevant
                 stackInstructions.append(['END'])
                 endOfStack = True
+                isCondition = True
 
               isAssign = False
 
         # Check if it's a relevant instruction
-        relevant = False
-        for var in vars:
-          if var[1] in usedVars[var[0]]:
-            relevant = True
-            break
+        if not isCondition:
+          for var in vars:
+            if var[1] in usedVars[var[0]]:
+              relevant = True
+              break
 
         if relevant:
           for var in vars:
@@ -1337,6 +1347,7 @@ class Calculon(Game):
           if assign != None:
             checkAssign(assign)
 
+          stackWorkingLines.append(i+1)
           stackInstructions.insert(0, instr.copy())
           stackIsRelevant = True
 
@@ -1346,8 +1357,9 @@ class Calculon(Game):
       if stackIsRelevant:
         nonlocal instructions
         instructions = stackInstructions + instructions
-      
-      return
+        self.workingLines = self.workingLines + stackWorkingLines
+
+      return stackIsRelevant
 
     while i >= 0:
       stack()
@@ -1374,18 +1386,19 @@ class Calculon(Game):
 
   def calculateScore(self):
     # Execute instructions
-    maxScore = 0
-    self.winnerVar = -1
+    self.current_score = 0
 
-    for v in range(0, self.usedStores['b$']):
-      score = executeCycles(self.instructions, v)
-      if score > maxScore:
-        self.winnerVar = v
-        maxScore = score
+    if self.lastBoolVarAssign != self.lastCalculatedBoolVar:
+      self.current_score = executeCycles(self.instructions, self.lastBoolVarAssign)
+      self.lastCalculatedBoolVar = self.lastBoolVarAssign
+      self.lastCalculatedScoreLine = len(self.instructions)
 
-    self.current_score = maxScore
     print("Score: ", self.current_score)
 
+    if self.current_score == 1:
+      self.game_won = True
+
+    '''
     if self.maxScore < self.current_score:
       self.maxScoreSurpass = True
       self.maxScore = self.current_score
@@ -1393,10 +1406,7 @@ class Calculon(Game):
     elif self.maxScore == self.current_score and self.maxScoreLen > len(self.instructions):
       self.maxScoreSurpass = True
       self.maxScoreLen = len(self.instructions)
-
-
-    if self.current_score == upTo:
-      self.game_won = True
+    '''
 
   def newLine(self):
     if self.focus_y >= 0:
@@ -1602,6 +1612,9 @@ class Calculon(Game):
       self.varIsUsed(stype, i)
 
   def varIsAssigned(self, stype, var):
+    if stype == 'b$':
+      self.lastBoolVarAssign = var
+
     if stype in self.assignStores and var in self.assignStores[stype]:
       self.assignStores[stype].remove(var)
     self.storesInAssign[stype+str(var)] = True
@@ -1847,6 +1860,10 @@ class Calculon(Game):
     # Init first line
     self.currentAction = -1
     self.goRight()
+
+    self.lastBoolVarAssign = None
+    self.lastCalculatedBoolVar = None
+    self.lastCalculatedScoreLine = 0
 
     print('Reset')
 
