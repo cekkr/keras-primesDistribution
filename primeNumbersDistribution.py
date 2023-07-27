@@ -52,7 +52,9 @@ import json
 
 """## Costum classes"""
 
-myFloat = np.float128
+myFloat = np.double
+if hasattr(np, 'float128'):
+    myFloat = np.float128
 
 """First, calculate prime numbers up to `upTo`, beginning from 2."""
 
@@ -1201,7 +1203,7 @@ drawLineNumber = False
 dontAllowEndOnDepth0 = True
 
 rewardVars = [
-    ['b$', storesNames['b$'].index('isPrime'), 3],
+    #['b$', storesNames['b$'].index('isPrime'), 3],
     ['d#', storesNames['d#'].index('primeProb')],
     ['d#', storesNames['d#'].index('predictedPrimeProb')],
     ['d#', storesNames['d#'].index('lastPrime')]
@@ -1274,7 +1276,15 @@ class Calculon(Game):
 
   def calculateScore(self):
     # Execute instructions
-    self.current_score = executeCycles(self.instructions)
+    maxScore = 0
+    self.winnerVar = -1
+
+    for v in range(0, self.usedStores['b$']):
+      score = executeCycles(self.instructions, v)
+      if score > maxScore:
+        self.winnerVar = v 
+
+    self.current_score = maxScore
 
     if self.maxScore < self.current_score:
       self.maxScoreSurpass = True
