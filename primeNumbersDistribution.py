@@ -120,7 +120,6 @@ class Agent:
 
     self.output_shape = model.layers[-1].output_shape[1:]
     print("output_shape: ", self.output_shape)
-    #assert len(output_shape) == 2, "Model's output shape should be (nb_samples, nb_actions)."
 
     self.fileTraining = 'lastTraining.json'
 
@@ -128,64 +127,11 @@ class Agent:
     if(os.path.exists(self.fileWeights)):
       model.load_weights(self.fileWeights)
 
-    if memory:
-      self.memory = memory
-    else:
-      self.memory = ExperienceReplay(self.input_shape)
-    if not nb_frames and not model.layers[1].input_shape:
-      raise Exception("Missing argument : nb_frames not provided")
-    elif not nb_frames:
-      nb_frames = model.layers[0].input_shape[0]
-    elif model.layers[1].input_shape and nb_frames and model.layers[1].input_shape != nb_frames:
-      raise Exception("Dimension mismatch : time dimension of model should be equal to nb_frames.")
     self.model = model
-    self.nb_frames = nb_frames
-    self.frames = None
-
-  @property
-  def memory_size(self):
-    return self.memory.memory_size
-
-  @memory_size.setter
-  def memory_size(self, value):
-    self.memory.memory_size = value
-
-  def reset_memory(self):
-    self.exp_replay.reset_memory()
-
-  def check_game_compatibility(self, game):
-    return # check temporarly disabled
-
-    game_output_shape = (1, None) + game.get_frame().shape
-    if len(game_output_shape) != len(self.model.layers[0].output_shape[0]):
-      print('game_output_shape: ', game_output_shape)
-      print('layer[0].output_shape', self.model.layers[0].output_shape)
-      raise Exception('Dimension mismatch. Input shape of the model should be compatible with the game.')
-    else:
-      for i in range(len(self.model.layers[0].input_shape)):
-        if self.model.layers[i].output_shape and game_output_shape[i] and self.model.layers[i].output_shape[0] != game_output_shape[i]:
-          print("Err on self.model.layers[i].output_shape[0]", self.model.layers[i].output_shape[0])
-          raise Exception('Dimension mismatch. Input shape of the model should be compatible with the game.')
-    if len(self.model.layers[0].output_shape) != 2 or self.model.layers[1].output_shape != game.nb_actions:
-      raise Exception('Output shape of model should be (nb_samples, nb_actions).')
 
   def get_game_data(self, game):
     frame = game.get_frame()
     return frame
-
-    # Deprecated
-    if self.frames is None:
-      self.frames = []
-
-    if len(self.frames) > 0: # buh
-        self.frames.pop(0)
-
-    self.frames.append(frame)
-
-    return np.expand_dims(self.frames, 0)
-
-  def clear_frames(self):
-    self.frames = None
 
   def saveJson(self, file, var):
     f = open(file, "w")
@@ -198,7 +144,17 @@ class Agent:
       return json.loads(f.read())
     return None
 
-  def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.5, reset_memory=False, observe=0, checkpoint=10):
+  def predictOptions(self, game):
+    res = []
+    for o in range(0, game.optionsLen):
+      game.selOption = o
+      frame = game.get_frame()
+      q = model.predict(np.array([frame]))
+      res.append(res[0][0])
+
+    return res
+
+  def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.5, observe=0, checkpoint=10):
     self.check_game_compatibility(game)
 
     if type(epsilon)  in {tuple, list}:
@@ -234,41 +190,50 @@ class Agent:
       accuracy = 0.
 
       game.reset()
-      self.clear_frames()
 
-      if reset_memory:
-        self.reset_memory()
-
-      game_over = False
-      S = self.get_game_data(game)
-
+      maxScore = 0
       cycles = 0
+      game_over = False
       while not game_over:
         cycles += 1
 
+        options = game.optionsLen
         if np.random.random() < epsilon or epoch < observe:
-          a = int(np.random.randint(game.nb_actions))
+          a = int(np.random.randint(options))
         else:
-          q = model.predict(np.array([S]))
-          q = q[0]
-          a = int(np.argmax(q))
+          p = self.predictOptions(game)
+          a = int(np.argmax(p))
 
-        game.play(a)
-        r = game.get_score()
-        S_prime = self.get_game_data(game)
-        game_over = game.is_over()
-        transition = [S, a, r, S_prime, game_over]
-        self.memory.remember(*transition)
-        S = S_prime
+        game.selOption = a
+        #S = self.get_game_data(game)
 
-        if epoch >= observe:
-          batch = self.memory.get_batch(model=model, batch_size=batch_size, gamma=gamma)
+        game.right() # next parameter
 
-          if batch:
-            inputs, targets = batch
-            train = model.train_on_batch(inputs, targets)
-            loss += float(train)
-            #accuracy += float(train[1])
+        if game.inNewLine:
+          score = game.get_score()
+
+          views = np.array([])
+          targets = np.array([])
+
+          if score <= maxScore:
+            for i in range(0, game.lastLineLen):
+              view = game.get_state(i * -1)
+              views.append(view)
+              targets.append(score)
+          else:
+            # Train the entire schema
+            for i in range(0, game.countInstructionsElements()):
+              view = game.get_state(i)
+              views.append(view)
+              targets.append(score)
+
+            # Train only the working algorithm
+
+            maxScore = score
+
+          train = model.train_on_batch(views, targets)
+          loss += float(train)
+          # accuracy += float(train[1])
 
         if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
           model.save_weights(self.fileWeights)
@@ -296,8 +261,7 @@ class Agent:
           observeModel = True
 
       loss /= cycles
-      loss /= upTo
-
+      #loss /= upTo
       accuracy /= cycles
 
       print("=========================================")
@@ -1195,7 +1159,7 @@ def executeCycles(instructions, isPrimeVar=0):
 This is the implementation of *Game* class for implementing the IDE. This 'game' is called Calculon.
 """
 
-actions = {0:'right', 1:'down'}
+actions = {0:'right', 1:'down'} # down action is currently unused in the q learning model
 ideWidth = 7
 
 # Game options
@@ -1233,7 +1197,7 @@ def checkVarReward(stype, num=-1):
 
 class Calculon(Game):
 
-  def __init__(self, num_lines=500):
+  def __init__(self, num_lines=100):
     self.num_lines = num_lines
     self.reset()
     self.state_changed = True
@@ -1267,12 +1231,29 @@ class Calculon(Game):
 
             case 1: # down
               self.goDown()
+
         except Exception as error:
           print('instruction: ', self.instructions[self.focus_y])
           raise Exception('Error: ', error)
 
     self.lineReward += self.currentReward
     return self.currentReward
+
+  def extractWinnerVarInstructions(self):
+    wv = self.winnerVar
+    usedVars = {'b$':[wv], 'd$':[]}
+
+    startFrom = len(self.instructions)
+    while startFrom > 0:
+      startFrom -= 1
+      instr = self.instructions[startFrom]
+      if instr[0] == 'b$' and instr[1] == wv:
+        break
+
+    i = startFrom
+    while i > 0:
+      i -= 1
+
 
   def calculateScore(self):
     # Execute instructions
@@ -1302,6 +1283,8 @@ class Calculon(Game):
     if self.focus_y >= 0:
       # Calculate current score
       self.calculateScore()
+      self.inNewLine = True
+      self.lastLineLen = len(self.curLine)
 
     print('Written line: ', self.curLine)
 
@@ -1469,7 +1452,7 @@ class Calculon(Game):
         for rem in remove:
           self.options.remove(rem)
 
-    if dontAllowEndOnDepth0 and self.depth <= 0 and not self.maxScoreSurpass:
+    if dontAllowEndOnDepth0 and self.depth <= 0: # and not self.maxScoreSurpass:
       if 'END' in self.options:
         self.options.remove('END')
 
@@ -1510,6 +1493,10 @@ class Calculon(Game):
     pop = self.assignStoresStack.pop()
     self.storesInAssign = pop[0]
     self.assignStores = pop[1]
+
+  @property
+  def optionsLen(self):
+    return len(self.options)
 
   def saveOption(self):
     if self.selOption == -1:
@@ -1594,6 +1581,8 @@ class Calculon(Game):
         self.curLine_argsAreBool = self.curLine_storeIsBool
 
   def goRight(self):
+    self.inNewLine = False
+
     self.saveOption()
 
     self.focus_x += 1
@@ -1606,7 +1595,7 @@ class Calculon(Game):
 
     self.loadOptions()
 
-  def goDown(self):
+  def goDown(self): #deprecated
     self.selOption += 1
 
     if self.selOption >= len(self.options):
@@ -1620,15 +1609,31 @@ class Calculon(Game):
         if opt in storeTypes:
           self.currentReward += checkVarReward(opt)
 
-  def get_state(self):
+  def countInstructionsElements(self):
+    tot = 0
+    for instr in self.instructions:
+      tot += len(instr)
+
+    return tot
+
+  def get_state(self, until=0):
     startFrom = 0
     if drawLineNumber:
       startFrom = 1
 
+    totElements = self.countInstructionsElements()
+
+    if until == 0:
+      until = totElements
+    elif until < 0:
+      until += totElements
+
     # Draw the current view
     canvas = []
 
+    elNumber = 0
     for y in range(0, self.num_lines):
+      elNumber += 1
       line = []
 
       instruction = []
@@ -1652,10 +1657,9 @@ class Calculon(Game):
 
           pixel[2] = val
 
-        if y == self.focus_y and xx == self.focus_x:
+        if elNumber == totElements or (y == self.focus_y and xx == self.focus_x):
           pixel[0] = 1
           setPixelVal(self.options[self.selOption])
-
         elif xx < len(instruction):
           setPixelVal(instruction[xx])
 
@@ -1663,9 +1667,14 @@ class Calculon(Game):
 
       canvas.append(line)
 
+      if elNumber == totElements:
+        break
+
     return np.array(canvas, dtype=np.uint)
 
   def get_score(self):
+    return self.current_score
+    # Currently disabled part due the change of the algorithm
     # Calculate score
     reward = self.lineReward + self.totalReward
     totScore = self.current_score + reward
@@ -1719,16 +1728,11 @@ class Calculon(Game):
   def right(self):
     self.play(0)
 
-  def down(self):
-    self.play(1)
-
-  def exit(self):
-    self.play(2)
-
 """# Execute"""
 
 ### Execution
 
+actions = 1
 grid_size = 50
 game = Calculon(grid_size)
 input_shape = (grid_size, game.ideWidth, 3)
@@ -1801,7 +1805,7 @@ def getModelDenseNet():
       model = Model(inputs, x)
       return model
 
-  model = DenseNet(input_shape=input_shape, num_blocks=3, num_layers_per_block=3, growth_rate=256, compression_factor=0.5, num_classes=2)
+  model = DenseNet(input_shape=input_shape, num_blocks=3, num_layers_per_block=3, growth_rate=256, compression_factor=0.5, num_classes=actions)
   model.compile(optimizer="adam", loss="mean_absolute_error")
   return model
 
@@ -1832,7 +1836,7 @@ def getModelLSTM():
   prev_layer = Flatten()(prev_layer)
 
   # Final output layer
-  output = Dense(2, activation='linear')(prev_layer)
+  output = Dense(actions, activation='linear')(prev_layer)
 
   # Create the model
   model = Model(inputs=inputs, outputs=output)
