@@ -1241,7 +1241,6 @@ class Calculon(Game):
 
   def extractWinnerVarInstructions(self):
     wv = self.winnerVar
-    usedVars = {'b$':[wv], 'd$':[]}
 
     startFrom = len(self.instructions)
     while startFrom > 0:
@@ -1250,9 +1249,95 @@ class Calculon(Game):
       if instr[0] == 'b$' and instr[1] == wv:
         break
 
+    usedVars = {'b$': [wv], 'd$': []}
+    assigns = []
+    instructions = []
+
+    def checkAssign(var):
+      ivar = -1
+      for i in range(0, len(assigns)):
+        a = assigns[i]
+        if var[0] == a[0] and var[1] == a[1]:
+          ivar = i
+          break
+
+      if ivar >= 0:
+        assigns.pop(ivar)
+
+      assigns.insert(0, var)
+
     i = startFrom
-    while i > 0:
-      i -= 1
+
+    def stack():
+      nonlocal usedVars
+      nonlocal i
+
+      stackInstructions = []
+      stackIsRelevant = False
+
+      stackLen = 0
+      while i >= 0:
+        stackLen += 1
+        instr = self.instructions[i]
+
+        assign = None
+        vars = []
+
+        endOfStack = False
+        isAssign = True
+        isVar = False
+        lastVarType = ''
+        for field in instr:
+          if isVar:
+            vars.append([lastVarType, field])
+            if isAssign:
+              assign = [lastVarType, field]
+            isVar = False
+
+          elif str(field).endswith('$'):
+            isVar = True
+            lastVarType = field
+
+          else:
+            if isAssign:
+              # Check stack
+              if field == 'END':
+                stack()
+              elif field == 'IF':
+                stackInstructions.insert(0, instr)
+                endOfStack = True
+
+              isAssign = False
+
+        # Check if it's a relevant instruction
+        relevant = False
+        for var in vars:
+          if var[1] in usedVars[var[0]]:
+            relevant = True
+            break
+
+        if relevant:
+          for var in vars:
+            if var[1] not in usedVars[var[0]]:
+              usedVars[var[0]] = var[1]
+
+          if assign != None:
+            checkAssign(assign)
+
+          stackInstructions.insert(0, instr)
+          stackIsRelevant = True
+
+        i -= 1
+
+        if endOfStack:
+          if stackIsRelevant:
+            nonlocal instructions
+            instructions = np.concatenate([stackInstructions, instructions], axis=0)
+
+          return
+
+    while i >= 0:
+      stack()
 
 
   def calculateScore(self):
