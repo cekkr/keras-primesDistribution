@@ -1346,6 +1346,7 @@ class Calculon(Game):
       if stackIsRelevant:
         nonlocal instructions
         instructions = stackInstructions + instructions
+      
       return
 
     while i >= 0:
@@ -1361,7 +1362,7 @@ class Calculon(Game):
         field = instr[f]
         if isVar:
           newIndex = getAssignIndex([lastVarType, field])
-          if newIndex == -1:
+          if newIndex == -1: # just for debug purposes
             print("newIndex error")
           instr[f] = newIndex
           isVar = False
