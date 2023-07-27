@@ -1253,27 +1253,28 @@ class Calculon(Game):
         break
 
     usedVars = {'b$': [wv], 'd$': []}
-    assigns = []
+    assigns = {'d$':[], 'b$':[]}
     instructions = []
 
     def getAssignIndex(var):
+      nonlocal assigns
+      ass = assigns[var[0]]
       ivar = -1
-      for i in range(0, len(assigns)):
-        a = assigns[i]
-        if var[0] == a[0] and var[1] == a[1]:
+      for i in range(0, len(ass)):
+        if ass[i] == var[1]:
           ivar = i
           break
-
       return ivar
 
     def checkAssign(var):
       nonlocal assigns
+      ass = assigns[var[0]]
       ivar = getAssignIndex(var)
 
       if ivar >= 0:
-        assigns.pop(ivar)
+        ass.pop(ivar)
 
-      assigns.insert(0, var)
+      ass.insert(0, var[1])
 
     i = startFrom
 
@@ -1315,7 +1316,7 @@ class Calculon(Game):
               if field == 'END':
                 stack()
               elif field == 'IF':
-                stackInstructions.insert(0, instr)
+                stackInstructions.insert(0, instr.copy())
                 stackInstructions.append(['END'])
                 endOfStack = True
 
@@ -1336,7 +1337,7 @@ class Calculon(Game):
           if assign != None:
             checkAssign(assign)
 
-          stackInstructions.insert(0, instr)
+          stackInstructions.insert(0, instr.copy())
           stackIsRelevant = True
 
         if endOfStack:
@@ -1359,7 +1360,10 @@ class Calculon(Game):
       for f in range(0, len(instr)):
         field = instr[f]
         if isVar:
-          instr[f] = getAssignIndex([lastVarType, field])
+          newIndex = getAssignIndex([lastVarType, field])
+          if newIndex == -1:
+            print("newIndex error")
+          instr[f] = newIndex
           isVar = False
         elif str(field).endswith('$'):
           isVar = True
@@ -1784,10 +1788,10 @@ class Calculon(Game):
 
           pixel[2] = val
 
-        if elNumber == totElements or (y == self.focus_y and xx == self.focus_x):
+        if elNumber == until or (y == self.focus_y and xx == self.focus_x):
           pixel[0] = 1
           setPixelVal(self.options[self.selOption])
-        elif elNumber < totElements and xx < len(instruction):
+        elif elNumber < until and xx < len(instruction):
           setPixelVal(instruction[xx])
 
         line.append(pixel)
