@@ -1492,7 +1492,7 @@ class Calculon(Game):
       elif self.curLine_isCondition:
         self.options = self.loadOptions_Condition()
       else:
-        for i in range(0, self.getNumStores(self.curLine_storeType)):
+        for i in range(0, self.usedStores[self.curLine_storeType]):
           self.options.append(i)
 
     else:
