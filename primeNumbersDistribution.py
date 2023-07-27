@@ -1340,10 +1340,12 @@ class Calculon(Game):
           stackIsRelevant = True
 
         if endOfStack:
-          if stackIsRelevant:
-            nonlocal instructions
-            instructions = np.concatenate([stackInstructions, instructions], axis=0)
-          return
+          break
+
+      if stackIsRelevant:
+        nonlocal instructions
+        instructions = stackInstructions + instructions
+      return
 
     while i >= 0:
       stack()
