@@ -1282,7 +1282,7 @@ class Calculon(Game):
     for v in range(0, self.usedStores['b$']):
       score = executeCycles(self.instructions, v)
       if score > maxScore:
-        self.winnerVar = v 
+        self.winnerVar = v
 
     self.current_score = maxScore
 
@@ -1642,11 +1642,7 @@ class Calculon(Game):
         xx = x - startFrom
         pixel = [0, 0, 0]
 
-        if y == self.focus_y and xx == self.focus_x:
-          pixel[0] = 1
-
-        if xx < len(instruction):
-          val = instruction[xx]
+        def setPixelVal(val):
           isNum = isinstance(val, int)
 
           if isNum:
@@ -1655,6 +1651,13 @@ class Calculon(Game):
             val = labels.index(val)
 
           pixel[2] = val
+
+        if y == self.focus_y and xx == self.focus_x:
+          pixel[0] = 1
+          setPixelVal(self.options[self.selOption])
+
+        elif xx < len(instruction):
+          setPixelVal(instruction[xx])
 
         line.append(pixel)
 
