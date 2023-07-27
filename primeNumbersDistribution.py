@@ -155,7 +155,6 @@ class Agent:
     return res
 
   def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.5, observe=0, checkpoint=10):
-    self.check_game_compatibility(game)
 
     if type(epsilon)  in {tuple, list}:
       delta =  ((epsilon[0] - epsilon[1]) / (nb_epoch * epsilon_rate))
@@ -204,16 +203,16 @@ class Agent:
           p = self.predictOptions(game)
           a = int(np.argmax(p))
 
-        game.selOption = a
+        game.goDown(a)
         #S = self.get_game_data(game)
 
-        game.right() # next parameter
+        game.goRight() # next parameter
 
         if game.inNewLine:
           score = game.get_score()
 
-          views = np.array([])
-          targets = np.array([])
+          views = []
+          targets = []
 
           if score <= maxScore:
             for i in range(0, game.lastLineLen):
@@ -228,8 +227,16 @@ class Agent:
               targets.append(score)
 
             # Train only the working algorithm
+            isolatedInstructions = game.extractWinnerVarInstructions()
+            for i in range(0, game.countInstructionsElements(isolatedInstructions)):
+              view = game.get_state(i, isolatedInstructions)
+              views.append(view)
+              targets.append(score)
 
             maxScore = score
+
+          views = np.array(views)
+          targets = np.array(targets)
 
           train = model.train_on_batch(views, targets)
           loss += float(train)
@@ -271,10 +278,8 @@ class Agent:
       K.clear_session() # try to reduce RAM usage
 
   def play(self, game, nb_epoch=10, epsilon=0., visualize=False):
-    self.check_game_compatibility(game)
     model = self.model
     win_count = 0
-    frames = []
 
     for epoch in range(nb_epoch):
       game.reset()
@@ -299,9 +304,6 @@ class Agent:
 
         game.play(action)
         S = self.get_game_data(game)
-
-        if visualize:
-          frames.append(game.draw())
 
         game_over = game.is_over()
 
@@ -1253,13 +1255,18 @@ class Calculon(Game):
     assigns = []
     instructions = []
 
-    def checkAssign(var):
+    def getAssignIndex(var):
       ivar = -1
       for i in range(0, len(assigns)):
         a = assigns[i]
         if var[0] == a[0] and var[1] == a[1]:
           ivar = i
           break
+
+      return ivar
+
+    def checkAssign(var):
+      ivar = getAssignIndex()
 
       if ivar >= 0:
         assigns.pop(ivar)
@@ -1305,6 +1312,7 @@ class Calculon(Game):
                 stack()
               elif field == 'IF':
                 stackInstructions.insert(0, instr)
+                stackInstructions.append(['END'])
                 endOfStack = True
 
               isAssign = False
@@ -1333,12 +1341,27 @@ class Calculon(Game):
           if stackIsRelevant:
             nonlocal instructions
             instructions = np.concatenate([stackInstructions, instructions], axis=0)
-
           return
 
     while i >= 0:
       stack()
 
+    # Reorder assigns
+    for i in range(0, len(instructions)):
+      instr = instructions[i]
+
+      isVar = False
+      lastVarType = ''
+      for f in range(0, len(instr)):
+        field = instr[f]
+        if isVar:
+          instr[f] = getAssignIndex([lastVarType, field])
+          isVar = False
+        elif str(field).endswith('$'):
+          isVar = True
+          lastVarType = field
+
+    return instructions # finally!
 
   def calculateScore(self):
     # Execute instructions
@@ -1395,7 +1418,10 @@ class Calculon(Game):
     self.lineReward = 0
 
     self.usedStores = self.lineUsedStores
-    self.lineUsedStores = self.usedStores
+    self.forkUsedStores()
+
+  def forkUsedStores(self):
+    self.lineUsedStores = self.usedStores.copy()
 
   def loadOptions_variables(self):
     for t in range(2, len(storeTypes)): # Add just variables
@@ -1419,10 +1445,10 @@ class Calculon(Game):
 
     self.game_over = True
 
-  def getNumStores(self, stype, excepted=0):
-    res = len(stores[stype]) + self.usedStores[stype]
+  def getNumStores(self, stype, excepted=-1):
+    res = self.usedStores[stype]
 
-    if res < excepted:
+    if res == excepted:
       self.lineUsedStores[stype] += 1
 
     return res
@@ -1680,8 +1706,12 @@ class Calculon(Game):
 
     self.loadOptions()
 
-  def goDown(self): #deprecated
-    self.selOption += 1
+  def goDown(self, selOption=-1):
+
+    if selOption == -1:
+      self.selOption += 1
+    else:
+      self.selOption = selOption
 
     if self.selOption >= len(self.options):
       self.currentReward = -1
@@ -1694,19 +1724,25 @@ class Calculon(Game):
         if opt in storeTypes:
           self.currentReward += checkVarReward(opt)
 
-  def countInstructionsElements(self):
+  def countInstructionsElements(self, instructions=None):
+    if instructions == None:
+      instructions = self.instructions
+
     tot = 0
-    for instr in self.instructions:
+    for instr in instructions:
       tot += len(instr)
 
     return tot
 
-  def get_state(self, until=0):
+  def get_state(self, until=0, instructions=None):
+    if instructions == None:
+      instructions = self.instructions
+
     startFrom = 0
     if drawLineNumber:
       startFrom = 1
 
-    totElements = self.countInstructionsElements()
+    totElements = self.countInstructionsElements(instructions)
 
     if until == 0:
       until = totElements
@@ -1722,8 +1758,8 @@ class Calculon(Game):
       line = []
 
       instruction = []
-      if y < len(self.instructions):
-        instruction = self.instructions[y]
+      if y < len(instructions):
+        instruction = instructions[y]
 
       if drawLineNumber:
         line.append([0, 1, y])
@@ -1745,15 +1781,12 @@ class Calculon(Game):
         if elNumber == totElements or (y == self.focus_y and xx == self.focus_x):
           pixel[0] = 1
           setPixelVal(self.options[self.selOption])
-        elif xx < len(instruction):
+        elif elNumber < totElements and xx < len(instruction):
           setPixelVal(instruction[xx])
 
         line.append(pixel)
 
       canvas.append(line)
-
-      if elNumber == totElements:
-        break
 
     return np.array(canvas, dtype=np.uint)
 
@@ -1785,12 +1818,15 @@ class Calculon(Game):
     self.selOption = -1
     self.endOfLine = 0
 
+    self.currentReward = 0 # currently unused
     self.lineReward = 0
     self.totalReward = 0
 
-    self.usedStores = {'d#':0, 'b#':0, 'd$':0, 'b$':0}
-    self.lineUsedStores = self.usedStores
     resetEngine()
+    self.usedStores = {'d#': 0, 'b#':0, 'd$':0, 'b$':0}
+    for t in self.usedStores:
+      self.usedStores[t] = len(stores[t])
+    self.forkUsedStores()
 
     self.assignStoresStack = []
     self.initAssignStores()
