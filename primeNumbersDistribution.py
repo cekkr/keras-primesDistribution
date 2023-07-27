@@ -286,9 +286,6 @@ class Agent:
       self.clear_frames()
       S = self.get_game_data(game)
 
-      if visualize:
-        frames.append(game.draw())
-
       game_over = False
       while not game_over:
         if np.random.rand() < epsilon:
@@ -1155,7 +1152,7 @@ def executeCycles(instructions, isPrimeVar=0):
     distributionMaxDiff += 1
 
   distributionDiff /= distributionMaxDiff
-  return (1 - distributionDiff)*upTo
+  return (1 - distributionDiff)
 
 """# The 'game'
 This is the implementation of *Game* class for implementing the IDE. This 'game' is called Calculon.
@@ -1248,6 +1245,10 @@ class Calculon(Game):
     while startFrom > 0:
       startFrom -= 1
       instr = self.instructions[startFrom]
+
+      if len(instr) == 0:
+        continue
+
       if instr[0] == 'b$' and instr[1] == wv:
         break
 
@@ -1266,7 +1267,8 @@ class Calculon(Game):
       return ivar
 
     def checkAssign(var):
-      ivar = getAssignIndex()
+      nonlocal assigns
+      ivar = getAssignIndex(var)
 
       if ivar >= 0:
         assigns.pop(ivar)
@@ -1278,6 +1280,7 @@ class Calculon(Game):
     def stack():
       nonlocal usedVars
       nonlocal i
+      nonlocal instructions
 
       stackInstructions = []
       stackIsRelevant = False
@@ -1286,6 +1289,7 @@ class Calculon(Game):
       while i >= 0:
         stackLen += 1
         instr = self.instructions[i]
+        i -= 1
 
         assign = None
         vars = []
@@ -1327,15 +1331,13 @@ class Calculon(Game):
         if relevant:
           for var in vars:
             if var[1] not in usedVars[var[0]]:
-              usedVars[var[0]] = var[1]
+              usedVars[var[0]].append(var[1])
 
           if assign != None:
             checkAssign(assign)
 
           stackInstructions.insert(0, instr)
           stackIsRelevant = True
-
-        i -= 1
 
         if endOfStack:
           if stackIsRelevant:
@@ -1372,8 +1374,10 @@ class Calculon(Game):
       score = executeCycles(self.instructions, v)
       if score > maxScore:
         self.winnerVar = v
+        maxScore = score
 
     self.current_score = maxScore
+    print("Score: ", self.current_score)
 
     if self.maxScore < self.current_score:
       self.maxScoreSurpass = True
@@ -1557,7 +1561,7 @@ class Calculon(Game):
               if self.depth > 0 and len(self.assignStores[opt]) == 0:
                 remove.append(opt)
             else:
-              if self.getNumStores(opt) == 0:
+              if self.usedStores[opt] == 0:
                 remove.append(opt)
 
         for rem in remove:
@@ -1963,12 +1967,12 @@ def getModelLSTM():
   model = Model(inputs=inputs, outputs=output)
 
   # Compile the model with appropriate loss, optimizer, and metrics
-  model.compile(loss='categorical_crossentropy', optimizer='adam') #, metrics=['accuracy']
+  model.compile(loss='mean_absolute_error', optimizer='adam') #, metrics=['accuracy']
   return model
 
 """## Run"""
 
-model = getModelLSTM()
+model = getModelDenseNet()
 
 agent = Agent(model)
 agent.train(game)
