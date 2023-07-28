@@ -150,7 +150,7 @@ class Agent:
       game.selOption = o
       frame = game.get_frame()
       q = model.predict(np.array([frame]))
-      res.append(res[0])
+      res.append(q[0][0])
 
     return res
 
@@ -1883,7 +1883,7 @@ class Calculon(Game):
 ### Execution
 
 actions = 1
-grid_size = 75
+grid_size = 100
 game = Calculon(grid_size)
 input_shape = (grid_size, game.ideWidth, 3)
 
