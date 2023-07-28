@@ -744,6 +744,8 @@ decimalCostNames = [
 
 decimalVarsNames = []
 
+engineFault = False
+
 def resetStores():
   storesNames = {}
   storesNamesAssoc = {}
@@ -859,7 +861,10 @@ def getStoreFields(fields):
   pos = fields[1]
 
   if not checkStoreFields(fields):
+    engineFault = True
     print("Error for fields", fields, stores[storeType])
+    raise Exception("Fields fault: check it")
+    
     if storeType.startswith('d'):
         return 0
     else:
@@ -1040,6 +1045,8 @@ def interpretBytecode(bytecode):
 ###
 
 def resetEngine():
+  engineFault = False
+
   resetStores()
 
   setStore('#zero', 0)
