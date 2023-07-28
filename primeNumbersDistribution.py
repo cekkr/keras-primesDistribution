@@ -1415,6 +1415,8 @@ class Calculon(Game):
       self.calculateScore()
       self.inNewLine = True
       self.lastLineLen = len(self.curLine)
+      
+      self.usedStores = self.lineUsedStores
 
     print('Written line: ', self.curLine, '   ', self.focus_y,'/',self.num_lines)
 
@@ -1443,7 +1445,6 @@ class Calculon(Game):
     self.totalReward += self.lineReward
     self.lineReward = 0
 
-    self.usedStores = self.lineUsedStores
     self.forkUsedStores()
 
   def forkUsedStores(self):
