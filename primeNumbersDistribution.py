@@ -864,7 +864,7 @@ def getStoreFields(fields):
     engineFault = True
     print("Error for fields", fields, stores[storeType])
     raise Exception("Fields fault: check it")
-    
+
     if storeType.startswith('d'):
         return 0
     else:
@@ -1396,7 +1396,7 @@ class Calculon(Game):
     # Execute instructions
     self.current_score = 0
 
-    if self.lastBoolVarAssign != self.lastCalculatedBoolVar:
+    if self.lastBoolVarAssign != self.lastCalculatedBoolVar and self.lastBoolVarAssign != None:
       self.current_score = executeCycles(self.instructions, self.lastBoolVarAssign)
       self.lastCalculatedBoolVar = self.lastBoolVarAssign
       self.lastCalculatedScoreLine = len(self.instructions)
@@ -1404,7 +1404,7 @@ class Calculon(Game):
     print("Score: ", self.current_score)
 
     if self.current_score == 1:
-      self.game_won = True
+      self.checkGameEnd()
 
     '''
     if self.maxScore < self.current_score:
@@ -1440,6 +1440,7 @@ class Calculon(Game):
   def resetCurLine(self, removeLine=False):
     if removeLine:
       self.instructions.pop(len(self.instructions)-1)
+      self.lastBoolVarAssign = None
 
     self.curLine = []
     self.instructions.append(self.curLine)
@@ -1476,7 +1477,7 @@ class Calculon(Game):
         self.options.append(storeTypes[t])
 
   def checkGameEnd(self):
-    if self.current_score >= upTo:
+    if self.current_score == 1:
       self.game_won = True
     else:
       self.game_won = False
@@ -1609,7 +1610,7 @@ class Calculon(Game):
       self.options.remove('IF')
 
     #todo: Delete these lines (just for debug purposes)
-    #if self.focus_x > 5:
+    #if self.focus_x > 1:
     #  self.options = []
 
     if len(self.options) == 0:
