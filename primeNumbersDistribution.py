@@ -150,7 +150,7 @@ class Agent:
       game.selOption = o
       frame = game.get_frame()
       q = model.predict(np.array([frame]))
-      res.append(res[0][0])
+      res.append(res[0])
 
     return res
 
