@@ -1415,7 +1415,7 @@ class Calculon(Game):
       self.calculateScore()
       self.inNewLine = True
       self.lastLineLen = len(self.curLine)
-      
+
       self.usedStores = self.lineUsedStores
 
     print('Written line: ', self.curLine, '   ', self.focus_y,'/',self.num_lines)
@@ -1424,15 +1424,19 @@ class Calculon(Game):
       self.newStack()
 
     self.resetCurLine()
-    self.instructions.append(self.curLine)
 
     self.focus_y += 1
 
     if self.focus_y >= self.num_lines:
       self.checkGameEnd()
 
-  def resetCurLine(self):
+  def resetCurLine(self, removeLine=False):
+    if removeLine:
+      self.instructions.pop(len(self.instructions)-1)
+
     self.curLine = []
+    self.instructions.append(self.curLine)
+
     self.endOfLine = 7
 
     self.focus_x = 0
@@ -1597,12 +1601,16 @@ class Calculon(Game):
     if 'IF' in self.options and (self.countConditionOptions() == 0):
       self.options.remove('IF')
 
+    #todo: Delete these lines (just for debug purposes)
+    #if self.focus_x > 5:
+    #  self.options = []
+
     if len(self.options) == 0:
       print("All options excluded...")
       print("curLine: ", self.curLine)
 
       # Reset curLine
-      self.resetCurLine()
+      self.resetCurLine(True)
       self.loadOptions()
 
     random.shuffle(self.options)
