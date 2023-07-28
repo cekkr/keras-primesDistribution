@@ -1415,7 +1415,7 @@ class Calculon(Game):
       self.inNewLine = True
       self.lastLineLen = len(self.curLine)
 
-    print('Written line: ', self.curLine)
+    print('Written line: ', self.curLine, '   ', len(self.instructions),'/',self.num_lines)
 
     if self.curLine_isCondition:
       self.newStack()
