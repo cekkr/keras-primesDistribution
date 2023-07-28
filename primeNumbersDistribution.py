@@ -191,7 +191,6 @@ class Agent:
       game.reset()
 
       lastCalculatedLine = 0
-      maxScore = 0
 
       cycles = 0
       game_over = False
@@ -245,6 +244,8 @@ class Agent:
             train = model.train_on_batch(views, targets)
             loss += float(train)
             # accuracy += float(train[1])
+
+          game_over = game.is_over()
 
         if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
           model.save_weights(self.fileWeights)
@@ -1415,7 +1416,7 @@ class Calculon(Game):
       self.inNewLine = True
       self.lastLineLen = len(self.curLine)
 
-    print('Written line: ', self.curLine, '   ', len(self.instructions),'/',self.num_lines)
+    print('Written line: ', self.curLine, '   ', self.focus_y,'/',self.num_lines)
 
     if self.curLine_isCondition:
       self.newStack()
