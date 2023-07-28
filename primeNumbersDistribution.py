@@ -1421,15 +1421,19 @@ class Calculon(Game):
     if self.curLine_isCondition:
       self.newStack()
 
-    self.curLine = []
+    self.resetCurLine()
     self.instructions.append(self.curLine)
-    self.endOfLine = 7
 
-    self.focus_x = 0
     self.focus_y += 1
 
     if self.focus_y >= self.num_lines:
       self.checkGameEnd()
+
+  def resetCurLine(self):
+    self.curLine = []
+    self.endOfLine = 7
+
+    self.focus_x = 0
 
     self.curLine_previousIsStoreTypes = False
     self.curLine_isOperation = False
@@ -1593,7 +1597,12 @@ class Calculon(Game):
       self.options.remove('IF')
 
     if len(self.options) == 0:
-      raise Exception("All options excluded...")
+      print("All options excluded...")
+      print("curLine: ", self.curLine)
+
+      # Reset curLine
+      self.resetCurLine()
+      self.loadOptions()
 
     random.shuffle(self.options)
 
