@@ -1947,7 +1947,7 @@ class Calculon(Game):
 ### Execution
 
 actions = 1
-grid_size = 125
+grid_size = 150
 game = Calculon(grid_size)
 input_shape = (grid_size, game.ideWidth, 3)
 
