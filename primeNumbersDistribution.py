@@ -164,9 +164,9 @@ class Agent:
 
   def checkRamUsage(self):
     usedRam = psutil.virtual_memory()[2] # in %
-    return usedRam > 80
+    return usedRam > 50
 
-  def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.75, observe=0, checkpoint=10, weighedScore = True):
+  def train(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.75, observe=0, checkpoint=10, weighedScore = True):
 
     if type(epsilon)  in {tuple, list}:
       delta =  ((epsilon[0] - epsilon[1]) / (nb_epoch * epsilon_rate))
