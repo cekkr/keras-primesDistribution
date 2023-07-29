@@ -220,10 +220,12 @@ class Agent:
 
             # Train only the working algorithm
             isolatedInstructions = game.extractWinnerVarInstructions()
+            scoreWeight = score * len(isolatedInstructions)
+
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i, isolatedInstructions)
               views.append(view)
-              targets.append(score)
+              targets.append(scoreWeight)
 
             # Train the working algorithm through the total script
             totElements = 0
@@ -234,7 +236,7 @@ class Agent:
                 for u in range(totElements, totElements+instrLen):
                   view = game.get_state(u)
                   views.append(view)
-                  targets.append(score)
+                  targets.append(scoreWeight)
 
               totElements += instrLen
 
