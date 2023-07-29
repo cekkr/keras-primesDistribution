@@ -154,7 +154,7 @@ class Agent:
 
     return res
 
-  def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.5, observe=0, checkpoint=10):
+  def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.5, observe=0, checkpoint=10, weighedScore = True):
 
     if type(epsilon)  in {tuple, list}:
       delta =  ((epsilon[0] - epsilon[1]) / (nb_epoch * epsilon_rate))
@@ -220,7 +220,10 @@ class Agent:
 
             # Train only the working algorithm
             isolatedInstructions = game.extractWinnerVarInstructions()
-            scoreWeight = score * len(isolatedInstructions)
+            
+            scoreWeight = score
+            if weighedScore:
+              scoreWeight *= len(isolatedInstructions)
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
