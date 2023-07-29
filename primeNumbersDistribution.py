@@ -229,7 +229,7 @@ class Agent:
 
             scoreWeight = score
             if weighedScore:
-              scoreWeight *= len(isolatedInstructions)
+              scoreWeight = pow(scoreWeight, 1/len(isolatedInstructions))
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
@@ -2024,7 +2024,7 @@ def getModelLSTM():
   prev_layer = Flatten()(prev_layer)
 
   # Final output layer
-  output = Dense(actions, activation='linear')(prev_layer)
+  output = Dense(actions, activation='sigmoid', bias_initializer=tf.keras.initializers.Constant(0.0))(prev_layer)
 
   # Create the model
   model = Model(inputs=inputs, outputs=output)
