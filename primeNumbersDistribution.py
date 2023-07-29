@@ -164,7 +164,7 @@ class Agent:
 
   def checkRamUsage(self):
     usedRam = psutil.virtual_memory()[2] # in %
-    return usedRam > 90
+    return usedRam > 75
 
   def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.75, observe=0, checkpoint=10, weighedScore = True):
 
@@ -1950,7 +1950,7 @@ class Calculon(Game):
 ### Execution
 
 actions = 1
-grid_size = 150
+grid_size = 125
 game = Calculon(grid_size)
 input_shape = (grid_size, game.ideWidth, 3)
 
