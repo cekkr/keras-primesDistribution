@@ -1534,7 +1534,7 @@ class Calculon(Game):
 
         if forceAssignToNewVar:
           if self.depth > 0:
-            for i in range(0, self.assignStores[self.curLine_storeType]):
+            for i in self.assignStores[self.curLine_storeType]:
               self.options.append(i)
         else:
           for i in self.assignStores[self.curLine_storeType]:
