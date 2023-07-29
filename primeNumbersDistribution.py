@@ -164,8 +164,7 @@ class Agent:
 
   def checkRamUsage(self):
     usedRam = psutil.virtual_memory()[2] # in %
-    if usedRam > 90:
-      K.clear_session()  # try to reduce RAM usage
+    return usedRam > 90
 
   def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.75, observe=0, checkpoint=10, weighedScore = True):
 
@@ -183,6 +182,7 @@ class Agent:
     observeModel = False
     totEpochs = nb_epoch
     minEpochsControl = totEpochs / 10
+    limitTrainingCount = 99999
 
     epoch = 0
 
@@ -194,6 +194,7 @@ class Agent:
       epoch = lastTrain['epoch']
       nb_epoch = lastTrain['nb_epoch']
       observeModel = lastTrain['observeModel']
+      limitTrainingCount = lastTrain['limitTrainingCount']
 
     while epoch < nb_epoch:
       epoch += 1
@@ -230,22 +231,31 @@ class Agent:
             views = []
             targets = []
 
-            distributeTraining = True
-            def trainView(view, target):
-              nonlocal distributeTraining
+            def trainView(view = None, target = None):
+              nonlocal limitTrainingCount
               nonlocal loss
               nonlocal  cycles
               nonlocal views
               nonlocal targets
 
-              if distributeTraining:
-                train = model.train_on_batch(np.array([view]), np.array([target]))
-                loss += float(train)
-                cycles += 1
-                self.checkRamUsage()
-              else:
+              execTrain = False
+              if view is not None:
                 views.append(view)
                 targets.append(target)
+              else:
+                execTrain = len(views) > 0
+
+              execTrain = execTrain or len(views) >= limitTrainingCount
+
+              if execTrain:
+                train = model.train_on_batch(np.array(views), np.array(targets))
+                loss += float(train)
+                cycles += 1
+
+                if self.checkRamUsage():
+                  limitTrainingCount = len(views) - 1
+
+                K.clear_session()  # try to reduce RAM usage
 
             # Train only the working algorithm
             isolatedInstructions = game.curWinnerInstructions
@@ -270,15 +280,7 @@ class Agent:
 
               totElements += instrLen
 
-            if not distributeTraining:
-              views = np.array(views)
-              targets = np.array(targets)
-
-              train = model.train_on_batch(views, targets)
-              loss += float(train)
-              # accuracy += float(train[1])
-              cycles += 1
-              self.checkRamUsage()
+            trainView() # flush views to train
 
           game_over = game.is_over()
 
@@ -291,7 +293,8 @@ class Agent:
               'final_epsilon': final_epsilon,
               'epoch': epoch,
               'nb_epoch': nb_epoch,
-              'observeModel': observeModel
+              'observeModel': observeModel,
+              'limitTrainingCount': limitTrainingCount
           }
           self.saveJson(self.fileTraining, save)
 
