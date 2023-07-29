@@ -1533,11 +1533,12 @@ class Calculon(Game):
     if self.curLine_previousIsStoreTypes:
       if self.curLine_isAssign:
 
-        if not forceAssignToNewVar:
+        if forceAssignToNewVar:
+          if self.depth > 0:
+            for i in range(0, self.assignStores[self.curLine_storeType]):
+              self.options.append(i)
+        else:
           for i in self.assignStores[self.curLine_storeType]:
-            self.options.append(i)
-        elif self.depth > 0:
-          for i in range(0, self.usedStores[self.curLine_storeType]):
             self.options.append(i)
 
         if self.depth == 0:
@@ -1904,7 +1905,6 @@ class Calculon(Game):
     self.forkUsedStores()
 
     self.assignStoresStack = []
-    self.initAssignStores()
 
     self.curLine_isCondition = False
 
