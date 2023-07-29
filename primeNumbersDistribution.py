@@ -145,12 +145,18 @@ class Agent:
     return None
 
   def predictOptions(self, game):
-    res = []
+    reqs = []
     for o in range(0, game.optionsLen):
       game.selOption = o
       frame = game.get_frame()
-      q = model.predict(np.array([frame]))
-      res.append(q[0][0])
+      reqs.append(frame)
+
+    reqs = np.array(reqs)
+    prediction = model.predict(np.array(reqs))
+
+    res = []
+    for p in prediction:
+      res.append(p[0])
 
     return res
 
