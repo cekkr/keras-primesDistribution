@@ -223,7 +223,7 @@ class Agent:
             scoreWeight = score * len(isolatedInstructions)
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
-              view = game.get_state(i, isolatedInstructions)
+              view = game.get_state(i+1, isolatedInstructions)
               views.append(view)
               targets.append(scoreWeight)
 
@@ -234,7 +234,7 @@ class Agent:
               instrLen = len(instr)
               if i in game.workingLines:
                 for u in range(totElements, totElements+instrLen):
-                  view = game.get_state(u)
+                  view = game.get_state(u+1)
                   views.append(view)
                   targets.append(scoreWeight)
 
