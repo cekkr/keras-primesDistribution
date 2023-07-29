@@ -700,6 +700,7 @@ labels.extend(decimalOps)
 
 boolOps = []
 boolOps.append('NOT')
+boolOps.append('OR')
 boolOps.append('CMP')
 boolOps.append('GT')
 boolOps.append('GET')
@@ -707,7 +708,7 @@ boolOps.append('GET')
 #boolOps.append('LET')
 labels.extend(boolOps)
 
-boolOps_bool = ['NOT']
+boolOps_bool = ['NOT', 'OR']
 boolOps_decimal = ['GT', 'GET', 'LT', 'LET']
 
 oneArgOps = ['NOT']
@@ -1026,6 +1027,9 @@ def interpretBytecode_line(line):
     # Bool
     case 'NOT':
       res = not arg1
+
+    case 'OR':
+      res = arg1 or arg2
 
     case 'CMP':
       res = arg1 == arg2
