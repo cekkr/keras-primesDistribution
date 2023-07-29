@@ -256,6 +256,8 @@ class Agent:
             loss += float(train)
             # accuracy += float(train[1])
 
+            K.clear_session()  # try to reduce RAM usage
+
           game_over = game.is_over()
 
         if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
@@ -290,8 +292,6 @@ class Agent:
       print("=========================================")
       print("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon, win_count))
       print("=========================================")
-
-      K.clear_session() # try to reduce RAM usage
 
   def play(self, game, nb_epoch=10, epsilon=0., visualize=False):
     model = self.model
