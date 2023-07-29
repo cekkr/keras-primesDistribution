@@ -1495,7 +1495,7 @@ class Calculon(Game):
 
     numVars = self.getNumStores('b$')
     for s in range(0, numVars):
-      if s in self.assignStores['b$']:
+      if s not in self.assignStores['b$']:
         stores.append(s)
 
     return stores
@@ -1634,10 +1634,13 @@ class Calculon(Game):
     self.initAssignStores()
 
   def initAssignStores(self):
-    self.assignStores = {'d$':[], 'b$':[]}
+    if self.depth == 0:
+      self.assignStores = {'d$':[], 'b$':[]}
 
-    self.setAsUsedStoreType('d$')
-    self.setAsUsedStoreType('b$')
+      self.setAsUsedStoreType('d$')
+      self.setAsUsedStoreType('b$')
+    else:
+      self.assignStores = self.assignStores.copy()
 
   def setAsUsedStoreType(self, stype):
     for i in range(0, self.getNumStores(stype)):
