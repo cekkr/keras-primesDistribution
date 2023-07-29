@@ -2024,7 +2024,7 @@ def getModelLSTM():
   prev_layer = Flatten()(prev_layer)
 
   # Final output layer
-  output = Dense(actions, activation='sigmoid', bias_initializer=tf.keras.initializers.Constant(0.0))(prev_layer)
+  output = Dense(actions, activation='linear', bias_initializer=tf.keras.initializers.Constant(0.0))(prev_layer)
 
   # Create the model
   model = Model(inputs=inputs, outputs=output)
