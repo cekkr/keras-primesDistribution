@@ -220,7 +220,7 @@ class Agent:
 
             # Train only the working algorithm
             isolatedInstructions = game.extractWinnerVarInstructions()
-            
+
             scoreWeight = score
             if weighedScore:
               scoreWeight *= len(isolatedInstructions)
@@ -1181,6 +1181,11 @@ ideWidth = 7
 # Game options
 drawLineNumber = False
 dontAllowEndOnDepth0 = True
+forceAssignToNewVar = True
+allowAssign = False
+
+if not allowAssign:
+  neutralOps.remove('ASSIGN')
 
 rewardVars = [
     #['b$', storesNames['b$'].index('isPrime'), 3],
@@ -1521,8 +1526,13 @@ class Calculon(Game):
     # Load available stores
     if self.curLine_previousIsStoreTypes:
       if self.curLine_isAssign:
-        for i in self.assignStores[self.curLine_storeType]:
-          self.options.append(i)
+
+        if not forceAssignToNewVar:
+          for i in self.assignStores[self.curLine_storeType]:
+            self.options.append(i)
+        elif self.depth > 0:
+          for i in range(0, self.usedStores[self.curLine_storeType]):
+            self.options.append(i)
 
         if self.depth == 0:
           self.options.append(self.getNumStores(self.curLine_storeType))
@@ -1547,13 +1557,16 @@ class Calculon(Game):
         case 2: # In case of operation
           self.options.extend(neutralOps)
 
+          # Handle DEFAULT operation
+          if self.depth > 0:
+            self.options.remove('DEFAULT')
+          elif self.getNumStores(self.curLine_assignType) != self.curLine_assignNum:
+            self.options.remove('DEFAULT')
+
           if self.curLine_assignIsBool:
             self.options.extend(boolOps)
           else:
             self.options.extend(decimalOps)
-
-          if self.getNumStores(self.curLine_assignType) != self.curLine_assignNum:
-            self.options.remove('DEFAULT')
 
           self.curLine_isOperation = True
           hasStore = True
@@ -1834,7 +1847,7 @@ class Calculon(Game):
 
           pixel[2] = val
 
-        if elNumber == until or (y == self.focus_y and xx == self.focus_x):
+        if elNumber == until or (until == totElements and y == self.focus_y and xx == self.focus_x):
           pixel[0] = 1
           setPixelVal(self.options[self.selOption])
         elif elNumber < until and xx < len(instruction):
@@ -1994,8 +2007,8 @@ def getModelDenseNet():
 
 def getModelLSTM():
   activation = 'gelu'
-  lstm_units = 512
-  num_lstm_layers = 2
+  lstm_units = 256
+  num_lstm_layers = 4
 
   inputs = Input(shape=input_shape)
   timeSeries = TimeDistributed(LSTM(units=lstm_units, activation=activation), input_shape=input_shape)(inputs)
@@ -2010,8 +2023,8 @@ def getModelLSTM():
       prev_layer = Concatenate()([prev_layer, lstm_layer])
 
   # Dense layers
-  prev_layer = Dense(256, activation=activation)(prev_layer)
   prev_layer = Dense(128, activation=activation)(prev_layer)
+  prev_layer = Dense(64, activation=activation)(prev_layer)
 
   # Flatten
   prev_layer = Flatten()(prev_layer)
@@ -2028,7 +2041,7 @@ def getModelLSTM():
 
 """## Run"""
 
-model = getModelDenseNet()
+model = getModelLSTM()
 
 agent = Agent(model)
 agent.train(game)
