@@ -1307,10 +1307,13 @@ class Calculon(Game):
     self.workingLines = []
     i = startFrom
 
+    previousStackWasRelevant = False
+
     def stack():
       nonlocal usedVars
       nonlocal i
       nonlocal instructions
+      nonlocal previousStackWasRelevant
 
       stackInstructions = []
       stackWorkingLines = []
@@ -1349,6 +1352,8 @@ class Calculon(Game):
                 stackWorkingLines.append(i+1)
                 stack()
               elif field == 'IF':
+                stackIsRelevant = stackIsRelevant or previousStackWasRelevant
+                previousStackWasRelevant = stackIsRelevant
                 relevant = stackIsRelevant
                 stackInstructions.append(['END'])
                 endOfStack = True
