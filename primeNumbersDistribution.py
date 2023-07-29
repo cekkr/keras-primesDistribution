@@ -50,6 +50,8 @@ import math
 
 import json
 
+import psutil
+
 """## Costum classes"""
 
 myFloat = np.double
@@ -160,6 +162,11 @@ class Agent:
 
     return res
 
+  def checkRamUsage(self):
+    usedRam = psutil.virtual_memory()[2] # in %
+    if usedRam > 90:
+      K.clear_session()  # try to reduce RAM usage
+
   def train(self, game, nb_epoch=1000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.75, observe=0, checkpoint=10, weighedScore = True):
 
     if type(epsilon)  in {tuple, list}:
@@ -201,7 +208,6 @@ class Agent:
       cycles = 0
       game_over = False
       while not game_over:
-        cycles += 1
 
         options = game.optionsLen
         if np.random.random() < epsilon or epoch < observe:
@@ -224,6 +230,23 @@ class Agent:
             views = []
             targets = []
 
+            distributeTraining = True
+            def trainView(view, target):
+              nonlocal distributeTraining
+              nonlocal loss
+              nonlocal  cycles
+              nonlocal views
+              nonlocal targets
+
+              if distributeTraining:
+                train = model.train_on_batch(np.array([view]), np.array([target]))
+                loss += float(train)
+                cycles += 1
+                self.checkRamUsage()
+              else:
+                views.append(view)
+                targets.append(target)
+
             # Train only the working algorithm
             isolatedInstructions = game.curWinnerInstructions
 
@@ -233,8 +256,7 @@ class Agent:
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
-              views.append(view)
-              targets.append(scoreWeight)
+              trainView(view, scoreWeight)
 
             # Train the working algorithm through the total script
             totElements = 0
@@ -244,19 +266,19 @@ class Agent:
               if i in game.workingLines:
                 for u in range(totElements, totElements+instrLen):
                   view = game.get_state(u+1)
-                  views.append(view)
-                  targets.append(scoreWeight)
+                  trainView(view, scoreWeight)
 
               totElements += instrLen
 
-            views = np.array(views)
-            targets = np.array(targets)
+            if not distributeTraining:
+              views = np.array(views)
+              targets = np.array(targets)
 
-            train = model.train_on_batch(views, targets)
-            loss += float(train)
-            # accuracy += float(train[1])
-
-            K.clear_session()  # try to reduce RAM usage
+              train = model.train_on_batch(views, targets)
+              loss += float(train)
+              # accuracy += float(train[1])
+              cycles += 1
+              self.checkRamUsage()
 
           game_over = game.is_over()
 
