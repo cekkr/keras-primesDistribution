@@ -225,7 +225,7 @@ class Agent:
             targets = []
 
             # Train only the working algorithm
-            isolatedInstructions = game.extractWinnerVarInstructions()
+            isolatedInstructions = game.curWinnerInstructions
 
             scoreWeight = score
             if weighedScore:
@@ -1267,7 +1267,7 @@ class Calculon(Game):
     return self.currentReward
 
   def extractWinnerVarInstructions(self):
-    wv = self.lastCalculatedBoolVar
+    wv = self.lastBoolVarAssign
 
     startFrom = len(self.instructions)
     while startFrom > 0:
@@ -1344,7 +1344,6 @@ class Calculon(Game):
           elif str(field).endswith('$'):
             isVar = True
             lastVarType = field
-
           else:
             if isAssign:
               # Check stack
@@ -1411,36 +1410,14 @@ class Calculon(Game):
           isVar = True
           lastVarType = field
 
+    self.curWinnerInstructions = instructions
+    self.curWinnerInstructions_winner = getAssignIndex(['b$', wv])
+
     return instructions # finally!
-
-  def calculateScore(self):
-    # Execute instructions
-    self.current_score = 0
-
-    if self.lastBoolVarAssign != self.lastCalculatedBoolVar and self.lastBoolVarAssign != None:
-      self.current_score = executeCycles(self.instructions, self.lastBoolVarAssign)
-      self.lastCalculatedBoolVar = self.lastBoolVarAssign
-      self.lastCalculatedScoreLine = len(self.instructions)
-
-    print("Score: ", self.current_score)
-
-    if self.current_score == 1:
-      self.checkGameEnd()
-
-    '''
-    if self.maxScore < self.current_score:
-      self.maxScoreSurpass = True
-      self.maxScore = self.current_score
-      self.maxScoreLen = len(self.instructions)
-    elif self.maxScore == self.current_score and self.maxScoreLen > len(self.instructions):
-      self.maxScoreSurpass = True
-      self.maxScoreLen = len(self.instructions)
-    '''
 
   def newLine(self):
     if self.focus_y >= 0:
       # Calculate current score
-      self.calculateScore()
       self.inNewLine = True
       self.lastLineLen = len(self.curLine)
 
@@ -1866,14 +1843,22 @@ class Calculon(Game):
     return np.array(canvas, dtype=np.uint)
 
   def get_score(self):
-    return self.current_score
-    # Currently disabled part due the change of the algorithm
-    # Calculate score
-    reward = self.lineReward + self.totalReward
-    totScore = self.current_score + reward
+    # Execute instructions
+    self.current_score = 0
 
-    print("Score: ", totScore,", ", self.current_score,", ", reward)
-    return totScore
+    if self.lastBoolVarAssign != self.lastCalculatedBoolVar and self.lastBoolVarAssign != None:
+      self.extractWinnerVarInstructions()
+
+      self.current_score = executeCycles(self.curWinnerInstructions, self.curWinnerInstructions_winner)
+      self.lastCalculatedBoolVar = self.lastBoolVarAssign
+      self.lastCalculatedScoreLine = len(self.instructions)
+
+    print("Score: ", self.current_score)
+
+    if self.current_score == 1:
+      self.checkGameEnd()
+
+    return self.current_score
 
   def reset(self):
     self.instructions = []
