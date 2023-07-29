@@ -51,6 +51,7 @@ import math
 import json
 
 import psutil
+import gc
 
 """## Costum classes"""
 
@@ -285,6 +286,8 @@ class Agent:
             trainView() # flush views to train
 
           game_over = game.is_over()
+
+        gc.collect()
 
         if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
           model.save_weights(self.fileWeights)
