@@ -230,7 +230,7 @@ class Agent:
           cycles += 1
 
           if self.checkRamUsage():
-            limitTrainingCount = len(views) - 1
+            limitTrainingCount = len(views) * 0.9
             if limitTrainingCount < 1:
               limitTrainingCount = 1
 
