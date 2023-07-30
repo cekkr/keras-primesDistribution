@@ -311,12 +311,9 @@ class Agent:
 
       # Train the best scores of the total script
       totElements = 0
-      for i in range(0, len(game.instructions)):
+      for i in range(0, len(game.instructions-1)):
         instr = game.instructions[i]
         instrLen = len(instr)
-
-        if(i >= len(linesScores)):
-          print("Requested ", i, " in ", len(linesScores))
 
         if linesScores[i] > 0:
           for u in range(totElements, totElements + instrLen):
