@@ -249,8 +249,7 @@ class Agent:
       isolatedHashScores = {}
 
       def getArrHash(arr):
-        arr.flags.writeable = False
-        return hash(a.data)
+        return hash(arr.tobytes())
 
       def viewScore(view, score):
         h = getArrHash(view)
