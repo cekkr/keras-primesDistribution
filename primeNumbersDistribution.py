@@ -200,12 +200,72 @@ class Agent:
     while epoch < nb_epoch:
       epoch += 1
 
+      limitTrainingCount *= 1.1
+
+      ### Training section
+      views = []
+      targets = []
+
+      def trainView(view=None, target=None):
+        nonlocal limitTrainingCount
+        nonlocal loss
+        nonlocal cycles
+        nonlocal views
+        nonlocal targets
+
+        execTrain = False
+        if view is not None:
+          views.append(view)
+          targets.append(target)
+        else:
+          execTrain = len(views) > 0
+
+        execTrain = execTrain or len(views) >= limitTrainingCount
+
+        if execTrain:
+          print("Training ", len(views))
+          train = model.train_on_batch(np.array(views), np.array(targets))
+          loss += float(train)
+          cycles += 1
+
+          if self.checkRamUsage():
+            limitTrainingCount = len(views) - 1
+            if limitTrainingCount < 1:
+              limitTrainingCount = 1
+
+          views.clear()
+          targets.clear()
+          K.clear_session()  # try to reduce RAM usage
+      ### End training section
+
       loss = 0.
       accuracy = 0.
 
       game.reset()
 
       lastCalculatedLine = 0
+
+      linesScores = [0] * game.num_lines
+      isolatedHashScores = {}
+
+      def getArrHash(arr):
+        arr.flags.writeable = False
+        return hash(a.data)
+
+      def viewScore(view, score):
+        h = getArrHash(view)
+        if h in isolatedHashScores:
+          s = isolatedHashScores[h]
+
+          if s < score:
+            isolatedHashScores[h] = score
+            return True
+          else:
+            return False
+        else:
+          isolatedHashScores[h] = score
+          return True
+
 
       cycles = 0
       game_over = False
@@ -219,7 +279,6 @@ class Agent:
           a = int(np.argmax(p))
 
         game.goDown(a)
-        #S = self.get_game_data(game)
 
         game.goRight() # next parameter
 
@@ -228,37 +287,6 @@ class Agent:
 
           if game.lastCalculatedScoreLine != lastCalculatedLine:
             lastCalculatedLine = game.lastCalculatedScoreLine
-
-            views = []
-            targets = []
-
-            def trainView(view = None, target = None):
-              nonlocal limitTrainingCount
-              nonlocal loss
-              nonlocal  cycles
-              nonlocal views
-              nonlocal targets
-
-              execTrain = False
-              if view is not None:
-                views.append(view)
-                targets.append(target)
-              else:
-                execTrain = len(views) > 0
-
-              execTrain = execTrain or len(views) >= limitTrainingCount
-
-              if execTrain:
-                train = model.train_on_batch(np.array(views), np.array(targets))
-                loss += float(train)
-                cycles += 1
-
-                if self.checkRamUsage():
-                  limitTrainingCount = len(views) - 1
-
-                views = []
-                targets = []
-                K.clear_session()  # try to reduce RAM usage
 
             # Train only the working algorithm
             isolatedInstructions = game.curWinnerInstructions
@@ -269,23 +297,32 @@ class Agent:
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
-              trainView(view, scoreWeight)
+              if viewScore(view, scoreWeight):
+                trainView(view, scoreWeight)
 
-            # Train the working algorithm through the total script
-            totElements = 0
-            for i in range(0, len(game.instructions)):
-              instr = game.instructions[i]
-              instrLen = len(instr)
-              if i in game.workingLines:
-                for u in range(totElements, totElements+instrLen):
-                  view = game.get_state(u+1)
-                  trainView(view, scoreWeight)
+            trainView() # flush
 
-              totElements += instrLen
-
-            trainView() # flush views to train
+            # Save working lines max score
+            for i in game.workingLines:
+              if linesScores[i] < scoreWeight:
+                linesScores[i] = scoreWeight
 
           game_over = game.is_over()
+
+        # Train the best scores of the total script
+        totElements = 0
+        for i in range(0, len(game.instructions)):
+          instr = game.instructions[i]
+          instrLen = len(instr)
+
+          if linesScores[i] > 0:
+            for u in range(totElements, totElements + instrLen):
+              view = game.get_state(u + 1)
+              trainView(view, linesScores[i])
+
+          totElements += instrLen
+
+        trainView() # flush remaining views to train
 
         gc.collect()
 
@@ -1955,7 +1992,7 @@ class Calculon(Game):
 ### Execution
 
 actions = 1
-grid_size = 125
+grid_size = 150
 game = Calculon(grid_size)
 input_shape = (grid_size, game.ideWidth, 3)
 
