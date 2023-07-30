@@ -1541,6 +1541,7 @@ class Calculon(Game):
     self.curLine_isOperation = False
     self.curLine_isCondition = False
     self.curLine_isAssign = False
+    self.curLine_argNum = 0
 
     self.totalReward += self.lineReward
     self.lineReward = 0
@@ -1620,6 +1621,10 @@ class Calculon(Game):
       else:
         for i in range(0, self.usedStores[self.curLine_storeType]):
           self.options.append(i)
+
+        if self.curLine_argNum == 2:
+          if self.curLine_2argSt == self.curLine_storeType:
+            self.options.remove(self.curLine_2argNum)
 
     else:
       match self.focus_x:
@@ -1780,6 +1785,12 @@ class Calculon(Game):
     if self.curLine_previousIsStoreTypes:
       self.getNumStores(self.curLine_storeType, opt)
       self.currentReward += checkVarReward(self.curLine_storeType, opt)
+
+      if self.curLine_argNum == 1:
+        self.curLine_2argSt = self.curLine_storeType
+        self.curLine_2argNum = opt
+
+      self.curLine_argNum += 1
 
       if self.curLine_isAssign: # is assignation
         self.varIsAssigned(self.curLine_storeType ,opt)
