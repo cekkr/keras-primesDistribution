@@ -315,6 +315,9 @@ class Agent:
         instr = game.instructions[i]
         instrLen = len(instr)
 
+        if(i >= len(linesScores)):
+          print("Requested ", i, " in ", len(linesScores))
+
         if linesScores[i] > 0:
           for u in range(totElements, totElements + instrLen):
             view = game.get_state(u + 1)
