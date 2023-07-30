@@ -165,7 +165,7 @@ class Agent:
 
   def checkRamUsage(self):
     usedRam = psutil.virtual_memory()[2] # in %
-    return usedRam > 60
+    return usedRam > 70
 
   def train(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., .1], epsilon_rate=0.75, observe=0, checkpoint=10, weighedScore = True):
 
@@ -246,7 +246,7 @@ class Agent:
 
       lastCalculatedLine = 0
 
-      linesScores = [0] * game.num_lines
+      linesScores = [0] * (game.num_lines+1)
       isolatedHashScores = {}
 
       def getArrHash(arr):
@@ -311,7 +311,7 @@ class Agent:
 
       # Train the best scores of the total script
       totElements = 0
-      for i in range(0, len(game.instructions-1)):
+      for i in range(0, len(game.instructions)):
         instr = game.instructions[i]
         instrLen = len(instr)
 
