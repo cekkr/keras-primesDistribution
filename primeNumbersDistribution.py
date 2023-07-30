@@ -1340,10 +1340,26 @@ class Calculon(Game):
   def extractWinnerVarInstructions(self):
     wv = self.lastBoolVarAssign
 
-    startFrom = len(self.instructions)
+    instructionsCp = self.instructions.copy()
+
+    # Compensate missing ends
+    missingEnds = 0
+    for instr in instructionsCp:
+      if len(instr) > 0:
+        if instr[0] == 'IF':
+          missingEnds += 1
+        elif instr[0] == 'END':
+          missingEnds -= 1
+
+    if missingEnds > 0:
+      for i in range(0, missingEnds):
+        instructionsCp.append(['END'])
+
+    # Find first important instruction
+    startFrom = len(instructionsCp)
     while startFrom > 0:
       startFrom -= 1
-      instr = self.instructions[startFrom]
+      instr = instructionsCp[startFrom]
 
       if len(instr) == 0:
         continue
@@ -1393,7 +1409,7 @@ class Calculon(Game):
       stackLen = 0
       while i >= 0:
         stackLen += 1
-        instr = self.instructions[i]
+        instr = instructionsCp[i]
         i -= 1
 
         assign = None
@@ -1419,11 +1435,12 @@ class Calculon(Game):
             if isAssign:
               # Check stack
               if field == 'END':
-                stackWorkingLines.append(i+1)
+                line = i+1
+                if line < len(self.instructions):
+                  stackWorkingLines.append(line)
+                    
                 stack()
               elif field == 'IF':
-                stackIsRelevant = stackIsRelevant or previousStackWasRelevant
-                previousStackWasRelevant = stackIsRelevant
                 relevant = stackIsRelevant
                 stackInstructions.append(['END'])
                 endOfStack = True
@@ -1439,6 +1456,8 @@ class Calculon(Game):
               break
 
         if relevant:
+          stackIsRelevant = True
+
           for var in vars:
             if var[1] not in usedVars[var[0]]:
               usedVars[var[0]].append(var[1])
