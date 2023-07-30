@@ -207,6 +207,10 @@ class Agent:
       targets = []
 
       def trainView(view=None, target=None):
+        debugDisableTraining = False
+        if debugDisableTraining:
+          return
+
         nonlocal limitTrainingCount
         nonlocal loss
         nonlocal cycles
