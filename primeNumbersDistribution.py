@@ -1591,7 +1591,7 @@ class Calculon(Game):
 
     numVars = self.getNumStores('b$')
     for s in range(0, numVars):
-      if s not in self.assignStores['b$']:
+      if s not in self.varUsedInIf:
         stores.append(s)
 
     return stores
@@ -1612,10 +1612,10 @@ class Calculon(Game):
 
         if forceAssignToNewVar:
           if self.depth > 0:
-            for i in self.assignStores[self.curLine_storeType]:
+            for i in range(0, self.getNumStores(self.curLine_storeType)):
               self.options.append(i)
         else:
-          for i in self.assignStores[self.curLine_storeType]:
+          for i in self.assignUsedStores[self.curLine_storeType]:
             self.options.append(i)
 
         if self.depth == 0:
@@ -1624,7 +1624,7 @@ class Calculon(Game):
       elif self.curLine_isCondition:
         self.options = self.loadOptions_Condition()
       else:
-        for i in range(0, self.usedStores[self.curLine_storeType]):
+        for i in range(0, self.getNumStores(self.curLine_storeType)):
           self.options.append(i)
 
         if self.curLine_argNum == 2:
@@ -1699,10 +1699,10 @@ class Calculon(Game):
         for opt in self.options:
           if opt in stores:
             if self.focus_x == 0:
-              if self.depth > 0 and len(self.assignStores[opt]) == 0:
+              if self.depth > 0 and len(self.assignUsedStores[opt]) == 0:
                 remove.append(opt)
             else:
-              if self.usedStores[opt] == 0:
+              if self.getNumStores(opt) == 0:
                 remove.append(opt)
 
         for rem in remove:
@@ -1730,17 +1730,17 @@ class Calculon(Game):
     random.shuffle(self.options)
 
   def newStack(self):
-    self.assignStoresStack.append(self.assignStores)
+    self.assignStoresStack.append(self.assignUsedStores)
     self.initAssignStores()
 
   def initAssignStores(self):
     if self.depth == 0:
-      self.assignStores = {'d$':[], 'b$':[]}
+      self.assignUsedStores = {'d$':[], 'b$':[]}
 
       self.setAsUsedStoreType('d$')
       self.setAsUsedStoreType('b$')
     else:
-      self.assignStores = self.assignStores.copy()
+      self.assignUsedStores = self.assignUsedStores.copy()
 
   def setAsUsedStoreType(self, stype):
     for i in range(0, self.getNumStores(stype)):
@@ -1750,15 +1750,18 @@ class Calculon(Game):
     if stype == 'b$':
       self.lastBoolVarAssign = var
 
-    if stype in self.assignStores and var in self.assignStores[stype]:
-      self.assignStores[stype].remove(var)
+      if var in self.varUsedInIf:
+        self.varUsedInIf.remove(var)
+
+    if stype in self.assignUsedStores and var in self.assignUsedStores[stype]:
+      self.assignUsedStores[stype].remove(var)
 
   def varIsUsed(self, stype, var):
-    if stype in self.assignStores and var not in self.assignStores[stype]:
-      self.assignStores[stype].append(var)
+    if stype in self.assignUsedStores and var not in self.assignUsedStores[stype]:
+      self.assignUsedStores[stype].append(var)
 
   def oldStack(self):
-    self.assignStores = self.assignStoresStack.pop()
+    self.assignUsedStores = self.assignStoresStack.pop()
 
   @property
   def optionsLen(self):
@@ -1802,6 +1805,9 @@ class Calculon(Game):
         self.curLine_assignNum = opt
         self.curLine_isAssign = False
       else:
+        if self.curLine_isCondition:
+          self.varUsedInIf.append(opt)
+
         self.varIsUsed(self.curLine_storeType, opt)
 
       self.curLine_previousIsStoreTypes = False
@@ -1999,6 +2005,8 @@ class Calculon(Game):
 
     self.assignStoresStack = []
     self.initAssignStores()
+
+    self.varUsedInIf = []
 
     self.curLine_isCondition = False
 
