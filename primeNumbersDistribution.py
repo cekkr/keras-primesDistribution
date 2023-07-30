@@ -223,8 +223,9 @@ class Agent:
         execTrain = execTrain or len(views) >= limitTrainingCount
 
         if execTrain:
-          print("Training ", len(views))
+          print("Training ", len(views), " elements... ", end="")
           train = model.train_on_batch(np.array(views), np.array(targets))
+          print("Loss: ", train)
           loss += float(train)
           cycles += 1
 
@@ -251,7 +252,7 @@ class Agent:
       def getArrHash(arr):
         return hash(arr.tobytes())
 
-      def viewScore(view, score):
+      def checkViewScore(view, score):
         h = getArrHash(view)
         if h in isolatedHashScores:
           s = isolatedHashScores[h]
@@ -296,7 +297,7 @@ class Agent:
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
-              if viewScore(view, scoreWeight):
+              if checkViewScore(view, scoreWeight):
                 trainView(view, scoreWeight)
 
             trainView() # flush
@@ -308,36 +309,36 @@ class Agent:
 
           game_over = game.is_over()
 
-        # Train the best scores of the total script
-        totElements = 0
-        for i in range(0, len(game.instructions)):
-          instr = game.instructions[i]
-          instrLen = len(instr)
+      # Train the best scores of the total script
+      totElements = 0
+      for i in range(0, len(game.instructions)):
+        instr = game.instructions[i]
+        instrLen = len(instr)
 
-          if linesScores[i] > 0:
-            for u in range(totElements, totElements + instrLen):
-              view = game.get_state(u + 1)
-              trainView(view, linesScores[i])
+        if linesScores[i] > 0:
+          for u in range(totElements, totElements + instrLen):
+            view = game.get_state(u + 1)
+            trainView(view, linesScores[i])
 
-          totElements += instrLen
+        totElements += instrLen
 
-        trainView() # flush remaining views to train
+      trainView() # flush remaining views to train
 
-        gc.collect()
+      gc.collect()
 
-        if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
-          model.save_weights(self.fileWeights)
+      if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
+        model.save_weights(self.fileWeights)
 
-          save = {
-              'delta': delta,
-              'epsilon': epsilon,
-              'final_epsilon': final_epsilon,
-              'epoch': epoch,
-              'nb_epoch': nb_epoch,
-              'observeModel': observeModel,
-              'limitTrainingCount': limitTrainingCount
-          }
-          self.saveJson(self.fileTraining, save)
+        save = {
+            'delta': delta,
+            'epsilon': epsilon,
+            'final_epsilon': final_epsilon,
+            'epoch': epoch,
+            'nb_epoch': nb_epoch,
+            'observeModel': observeModel,
+            'limitTrainingCount': limitTrainingCount
+        }
+        self.saveJson(self.fileTraining, save)
 
       if game.is_won():
         win_count += 1
