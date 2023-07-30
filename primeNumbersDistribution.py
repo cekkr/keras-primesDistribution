@@ -297,7 +297,8 @@ class Agent:
 
             scoreWeight = score
             if weighedScore:
-              scoreWeight = pow(scoreWeight, 1/len(isolatedInstructions))
+              #scoreWeight = pow(scoreWeight, 1 / len(isolatedInstructions))
+              scoreWeight = pow(scoreWeight, len(isolatedInstructions))
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
