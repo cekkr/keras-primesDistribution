@@ -54,11 +54,35 @@ import json
 import psutil
 import gc
 
+from datetime import datetime
+
+
 """## Costum classes"""
 
 myFloat = np.double
 if hasattr(np, 'float128'):
     myFloat = np.float128
+
+output = open("output.txt", "w")
+lastPrintNewLine = True
+def myPrint(*argv, **kwargs):
+  nonlocal  lastPrintNewLine
+
+  print(*argv, **kwargs)
+
+  time = ''
+  if lastPrintNewLine:
+    now = datetime.now()
+    time = now.strftime("%m/%d/%Y, %H:%M:%S") + ': '
+
+  end = '\n'
+  if 'end' in kwargs:
+    end = kwargs['end']
+    lastPrintNewLine = False
+  else:
+    lastPrintNewLine = True
+
+  output.write(time + ''.join(str(v) for v in argv)+end)
 
 """First, calculate prime numbers up to `upTo`, beginning from 2."""
 
@@ -87,7 +111,7 @@ while num <= upTo:
 
   num += 1
 
-print("First "+ str(upTo) +" numbers calculated")
+myPrint("First "+ str(upTo) +" numbers calculated")
 
 """Then calculate distribution"""
 
@@ -107,7 +131,7 @@ while n <= upTo:
   distribution.append(numPrimes)
   n += 1
 
-print("Distribution calculated (",len(distribution),")")
+myPrint("Distribution calculated (",len(distribution),")")
 
 """# Q-Learning library
 
@@ -120,10 +144,10 @@ class Agent:
 
   def __init__(self, model, memory=None, nb_frames=None):
     self.input_shape = model.input_shape[1:]
-    print("input_shape: ", self.input_shape)
+    myPrint("input_shape: ", self.input_shape)
 
     self.output_shape = model.layers[-1].output_shape[1:]
-    print("output_shape: ", self.output_shape)
+    myPrint("output_shape: ", self.output_shape)
 
     self.fileTraining = 'lastTraining.json'
 
@@ -233,9 +257,9 @@ class Agent:
         execTrain = execTrain or len(views) >= limitTrainingCount
 
         if execTrain:
-          print("Training ", len(views), " elements... ", end="")
+          myPrint("Training ", len(views), " elements... ", end="")
           train = model.train_on_batch(np.array(views), np.array(targets))
-          print("Loss: ", train)
+          myPrint("Loss: ", train)
           loss += float(train)
           cycles += 1
 
@@ -314,7 +338,7 @@ class Agent:
               weight = len(isolatedInstructions)
               weight /= avgNumberIsolatedLines
               scoreWeight = pow(score, weight)
-              print("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t avgLines:", avgNumberIsolatedLines)
+              myPrint("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t avgLines:", avgNumberIsolatedLines)
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
@@ -379,9 +403,9 @@ class Agent:
       #loss /= upTo
       accuracy /= cycles
 
-      print("=========================================")
-      print("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon, win_count))
-      print("=========================================")
+      myPrint("=========================================")
+      myPrint("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon, win_count))
+      myPrint("=========================================")
 
   def play(self, game, nb_epoch=10, epsilon=0., visualize=False):
     model = self.model
@@ -395,7 +419,7 @@ class Agent:
       game_over = False
       while not game_over:
         if np.random.rand() < epsilon:
-          print("random")
+          myPrint("random")
           action = int(np.random.randint(0, game.nb_actions))
         else:
           q = model.predict(np.array([S]))
@@ -413,7 +437,7 @@ class Agent:
       if game.is_won():
         win_count += 1
 
-    print("Accuracy {} %".format(100. * win_count / nb_epoch))
+    myPrint("Accuracy {} %".format(100. * win_count / nb_epoch))
 
     if visualize and False: #todo: handle this possibility on colab
       if 'images' not in os.listdir('.'):
@@ -819,7 +843,7 @@ def setStoreFields(fields, value):
       try:
           value = bool(value)
       except:
-          print('neu')
+          myPrint('neu')
 
   valBool = isinstance(value, bool)
 
@@ -838,14 +862,14 @@ def setStoreFields(fields, value):
 
 def getStoreFields(fields):
   if len(fields) != 2:
-    print("Error: as fields I got a ", fields)
+    myPrint("Error: as fields I got a ", fields)
 
   storeType = fields[0]
   pos = fields[1]
 
   if not checkStoreFields(fields):
     engineFault = True
-    print("Error for fields", fields, stores[storeType])
+    myPrint("Error for fields", fields, stores[storeType])
     raise Exception("Fields fault: check it")
 
     if storeType.startswith('d'):
@@ -896,7 +920,7 @@ def instructionsToByteCode(instructions):
       if field == '': # it depends how is done the instruction array
         break
 
-      #print('Reading field ',field, nextIsStore)
+      #myPrint('Reading field ',field, nextIsStore)
 
       if f == 0: # if it's the first field of the line
         if field == 'IF':
@@ -935,7 +959,7 @@ def instructionsToByteCode(instructions):
 ###
 
 def interpretBytecode_condition(condition):
-  #print('Condition: ', condition)
+  #myPrint('Condition: ', condition)
   match condition['statement']:
     case 'IF':
       if getStoreFields(condition['condition']):
@@ -1220,7 +1244,7 @@ class Calculon(Game):
 
   def play(self, action):
     if action not in range(self.nb_actions):
-      print('Called wrong action: ', action)
+      myPrint('Called wrong action: ', action)
       self.currentReward = -2 # punish the agent ^-^
     else:
         self.currentAction = action
@@ -1235,7 +1259,7 @@ class Calculon(Game):
               self.goDown()
 
         except Exception as error:
-          print('instruction: ', self.instructions[self.focus_y])
+          myPrint('instruction: ', self.instructions[self.focus_y])
           raise Exception('Error: ', error)
 
     self.lineReward += self.currentReward
@@ -1397,7 +1421,7 @@ class Calculon(Game):
         if isVar:
           newIndex = getAssignIndex([lastVarType, field])
           if newIndex == -1: # just for debug purposes
-            print("newIndex error")
+            myPrint("newIndex error")
           instr[f] = newIndex
           isVar = False
         elif str(field).endswith('$'):
@@ -1417,7 +1441,7 @@ class Calculon(Game):
 
       self.usedStores = self.lineUsedStores
 
-    print('Written line: ', self.curLine, '   ', self.focus_y,'/',self.num_lines)
+    myPrint('Written line: ', self.curLine, '   ', self.focus_y,'/',self.num_lines)
 
     if self.curLine_isCondition:
       self.newStack()
@@ -1578,7 +1602,7 @@ class Calculon(Game):
               self.loadOptions_decimal()
 
             case _:
-              print('Wrong curLine_opType: ', self.curLine_opType)
+              myPrint('Wrong curLine_opType: ', self.curLine_opType)
 
           if not self.curLine_isOperation:
             raise Exception('This line is not an operation...')
@@ -1619,8 +1643,8 @@ class Calculon(Game):
     #  self.options = []
 
     if len(self.options) == 0:
-      print("All options excluded...")
-      print("curLine: ", self.curLine)
+      myPrint("All options excluded...")
+      myPrint("curLine: ", self.curLine)
 
       # Reset curLine
       self.resetCurLine(True)
@@ -1671,7 +1695,7 @@ class Calculon(Game):
       return
 
     if self.selOption >= len(self.options):
-      print('Error on selOption: ', self.focus_x, self.focus_y)
+      myPrint('Error on selOption: ', self.focus_x, self.focus_y)
       raise Exception('selOption out of bounds: ', self.selOption, ' in ', self.options);
 
     opt = self.options[self.selOption]
@@ -1867,7 +1891,7 @@ class Calculon(Game):
       self.lastCalculatedBoolVar = self.lastBoolVarAssign
       self.lastCalculatedScoreLine = len(self.instructions)
 
-    print("Score: ", self.current_score)
+    myPrint("Score: ", self.current_score)
 
     if self.current_score == 1:
       self.checkGameEnd()
@@ -1917,7 +1941,7 @@ class Calculon(Game):
     self.lastCalculatedBoolVar = None
     self.lastCalculatedScoreLine = 0
 
-    print('Reset')
+    myPrint('Reset')
 
   def is_over(self):
     return self.game_over
