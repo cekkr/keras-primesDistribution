@@ -198,6 +198,9 @@ class Agent:
       observeModel = lastTrain['observeModel']
       limitTrainingCount = lastTrain['limitTrainingCount']
 
+    avgNumberIsolatedLines = 1
+    avgNumberIsolatedLinesCount = 0
+
     while epoch < nb_epoch:
       epoch += 1
 
@@ -249,8 +252,6 @@ class Agent:
 
       game.reset()
 
-      lastCalculatedLine = 0
-
       linesScores = [0] * (game.num_lines+1)
       isolatedHashScores = {}
 
@@ -290,16 +291,22 @@ class Agent:
         if game.inNewLine:
           score = game.get_score()
 
-          if game.lastCalculatedScoreLine != lastCalculatedLine:
-            lastCalculatedLine = game.lastCalculatedScoreLine
-
+          if score >= 0:
             # Train only the working algorithm
             isolatedInstructions = game.curWinnerInstructions
 
+            if score > 0:
+              scoreWeight = len(isolatedInstructions)*score
+              avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + scoreWeight)
+              avgNumberIsolatedLinesCount += score
+              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount
+
             scoreWeight = score
             if weighedScore:
-              #scoreWeight = pow(scoreWeight, 1 / len(isolatedInstructions))
-              scoreWeight = pow(scoreWeight, len(isolatedInstructions))
+              weight = len(isolatedInstructions)
+              weight = weight / avgNumberIsolatedLines
+              scoreWeight = pow(scoreWeight, weight)
+              print("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t avgLines:", avgNumberIsolatedLines)
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
@@ -1841,7 +1848,7 @@ class Calculon(Game):
 
   def get_score(self):
     # Execute instructions
-    self.current_score = 0
+    self.current_score = -1
 
     if self.lastBoolVarAssign != self.lastCalculatedBoolVar and self.lastBoolVarAssign != None:
       self.extractWinnerVarInstructions()
