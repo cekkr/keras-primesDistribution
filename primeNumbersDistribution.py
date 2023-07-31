@@ -323,15 +323,10 @@ class Agent:
 
             scoreWeight = score
             if weighedScore and score > 0:
-              weight = len(isolatedInstructions)
-              weight /= avgNumberIsolatedLines
-              scoreWeight = pow(scoreWeight, weight)
-
               linesWeight = len(isolatedInstructions)*scoreWeight
               avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + linesWeight)
               avgNumberIsolatedLines /= avgNumberIsolatedLinesCount + scoreWeight
-
-              #avgNumberIsolatedLinesCount += score
+              
               if score > avgNumberIsolatedLinesCount:
                 avgNumberIsolatedLinesCount = scoreWeight
 
