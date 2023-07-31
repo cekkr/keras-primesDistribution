@@ -168,7 +168,7 @@ class Agent:
     usedRam = psutil.virtual_memory()[2] # in %
     return usedRam > 70
 
-  def train(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., 0], epsilon_rate=2/3, observe=0, checkpoint=10, weighedScore = True):
+  def train(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., 0], epsilon_rate=3/4, observe=0, checkpoint=10, weighedScore = True):
 
     if type(epsilon)  in {tuple, list}:
       delta =  ((epsilon[0] - epsilon[1]) / (nb_epoch * epsilon_rate))
@@ -404,125 +404,6 @@ class Agent:
       for i in range(len(frames)):
         plt.imshow(frames[i], interpolation='none')
         plt.savefig("images/" + game.name + str(i) + ".png")
-
-###
-### Memory
-###
-class Memory:
-
-    def __init__(self):
-        pass
-
-    def remember(self, S, a, r, S_prime, game_over):
-        pass
-
-    def get_batch(self, model, batch_size):
-        pass
-
-
-class ExperienceReplay(Memory):
-
-    def __init__(self, input_shape):
-        self.input_shape = input_shape
-        self.memory = []
-        self.orderedMemory = []
-        self._memory_size = batch_size
-
-    def remember(self, s, a, r, s_prime, game_over):
-        self.orig_input_shape = s.shape
-
-        # Remove superfluous actions
-        if len(self.memory) > 0:
-          prev = len(self.orderedMemory)-1
-          prevA = self.orderedMemory[prev]
-          if prevA == 0: # it's action "down"
-            self.memory.pop(prev)
-            self.orderedMemory.pop(prev)
-
-        concat = np.concatenate([s.flatten(), np.array(a).flatten(), np.array(r).flatten(), s_prime.flatten(), 1 * np.array(game_over).flatten()])
-        self.memory.append(concat)
-        self.orderedMemory.append([a])
-
-        if self.memory_size > 0 and len(self.memory) > self.memory_size:
-          self.memory.pop(0)
-          self.orderedMemory.pop(0)
-
-    def get_batch(self, model, batch_size, gamma=0.9):
-      memLen = len(self.memory)
-
-      nb_actions = model.layers[-1].output_shape[-1]
-
-      samples = np.array(sample(self.memory, memLen))
-
-      input_dim = np.prod(self.orig_input_shape)
-      S = samples[:, 0 : input_dim]
-      a = samples[:, input_dim]
-      r = samples[:, input_dim + 1]
-      S_prime = samples[:, input_dim + 2 : 2 * input_dim + 2]
-
-      r = r.repeat(nb_actions).reshape((memLen, nb_actions))
-
-      S = S.reshape((memLen, ) + self.orig_input_shape)
-      S_prime = S_prime.reshape((memLen, ) +self.orig_input_shape)
-
-      X = np.concatenate([S, S_prime], axis=0)
-      Y = model.predict(X)
-
-      if(math.isnan(Y[0][0])):
-        raise Exception("Prediction is broken :(")
-
-      ybs_ = Y[memLen:]
-      Qsa = np.max(ybs_, axis=1).repeat(nb_actions).reshape((memLen, nb_actions))
-
-      y_bs = Y[:memLen]
-      y_bs_rs = np.max(y_bs, axis=1).repeat(nb_actions).reshape((memLen, nb_actions))
-
-      a = np.cast['int'](a)
-      delta = np.zeros((memLen, nb_actions))
-      deltaMinSize = 1 # int(y_bs_rs.shape[0] / len(a))
-
-      for i in range(0, len(a)):
-        deltaPiece = np.zeros((deltaMinSize, nb_actions))
-        aa = np.array([a[i]])
-        arange = np.arange(deltaMinSize)
-        deltaPiece[arange, aa] = 1
-        delta[i] = deltaPiece
-
-      '''
-      # Original algorithm:
-      game_over = samples[:, 2 * input_dim + 2]
-      game_over = game_over.repeat(nb_actions).reshape((memLen, nb_actions))
-      r = r.reshape((memLen, nb_actions))
-      r /= upTo
-      rgo = r + gamma * (1 - game_over)
-      targets = (1 - delta) * y_bs_rs + delta * (rgo * Qsa)
-      '''
-
-      r = r.reshape((memLen, nb_actions))
-
-      avgPredict = (y_bs_rs + Qsa)/2 # I don't know if it has really sense
-      deltaMin = 1 - delta
-
-      targets = (deltaMin * avgPredict) + (delta * r)
-
-      return S, targets
-
-    @property
-    def memory_size(self):
-        return self._memory_size
-
-    @memory_size.setter
-    def memory_size(self, value):
-        if value > 0 and value < self._memory_size:
-            self.memory = self.memory[:value]
-        self._memory_size = value
-
-    def reset_memory(self):
-        self.memory = []
-
-    def  one_hot(self, seq, num_classes):
-        return K.one_hot(K.reshape(K.cast(seq, "int32"), (-1, 1)), num_classes)
-
 
 ###
 ### Game parent class
