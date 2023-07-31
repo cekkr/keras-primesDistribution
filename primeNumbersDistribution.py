@@ -352,8 +352,8 @@ class Agent:
             'nb_epoch': nb_epoch,
             'observeModel': observeModel,
             'limitTrainingCount': limitTrainingCount,
-            'avgNumberIsolatedLines': avgNumberIsolatedLines,
-            'avgNumberIsolatedLinesCount': avgNumberIsolatedLinesCount
+            'avgNumberIsolatedLines': float(avgNumberIsolatedLines),
+            'avgNumberIsolatedLinesCount': float(avgNumberIsolatedLinesCount)
         }
         self.saveJson(self.fileTraining, save)
 
