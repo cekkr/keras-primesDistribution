@@ -297,21 +297,21 @@ class Agent:
             # Train only the working algorithm
             isolatedInstructions = game.curWinnerInstructions
 
-            if score > 0:
-              scoreWeight = len(isolatedInstructions)*score
-              avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + scoreWeight)
+            scoreWeight = score
+            if weighedScore:
+              weight = len(isolatedInstructions)
+              weight /= avgNumberIsolatedLines
+              scoreWeight = pow(scoreWeight, weight)
+              print("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t avgLines:", avgNumberIsolatedLines)
+
+            if scoreWeight > 0:
+              linesWeight = len(isolatedInstructions)*scoreWeight
+              avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + linesWeight)
               avgNumberIsolatedLines /= avgNumberIsolatedLinesCount + score
 
               #avgNumberIsolatedLinesCount += score
               if score > avgNumberIsolatedLinesCount:
                 avgNumberIsolatedLinesCount = score
-
-            scoreWeight = score
-            if weighedScore:
-              weight = len(isolatedInstructions)
-              weight = weight / avgNumberIsolatedLines
-              scoreWeight = pow(scoreWeight, weight)
-              print("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t avgLines:", avgNumberIsolatedLines)
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
