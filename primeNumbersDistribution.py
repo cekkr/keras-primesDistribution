@@ -189,7 +189,7 @@ class Agent:
     epoch = 0
 
     avgNumberIsolatedLines = 1
-    avgNumberIsolatedLinesCount = 1
+    avgNumberIsolatedLinesCount = 0
 
     lastTrain = self.readJson(self.fileTraining)
     if lastTrain != None:
@@ -300,8 +300,11 @@ class Agent:
             if score > 0:
               scoreWeight = len(isolatedInstructions)*score
               avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + scoreWeight)
-              avgNumberIsolatedLinesCount += score
-              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount
+              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount + score
+
+              #avgNumberIsolatedLinesCount += score
+              if score > avgNumberIsolatedLinesCount:
+                avgNumberIsolatedLinesCount = score
 
             scoreWeight = score
             if weighedScore:
