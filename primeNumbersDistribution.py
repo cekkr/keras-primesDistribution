@@ -190,7 +190,7 @@ class Agent:
 
   def checkRamUsage(self):
     usedRam = psutil.virtual_memory()[2] # in %
-    return usedRam > 70
+    return usedRam > 75
 
   def train(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., 0], epsilon_rate=3/4, observe=0, checkpoint=10, weighedScore = True):
 
@@ -264,7 +264,7 @@ class Agent:
           cycles += 1
 
           if self.checkRamUsage():
-            limitTrainingCount = len(views) * 0.9
+            limitTrainingCount = len(views) * 0.75
             if limitTrainingCount < 1:
               limitTrainingCount = 1
 
