@@ -307,7 +307,7 @@ class Agent:
             if scoreWeight > 0:
               linesWeight = len(isolatedInstructions)*scoreWeight
               avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + linesWeight)
-              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount + score
+              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount + scoreWeight
 
               #avgNumberIsolatedLinesCount += score
               if score > avgNumberIsolatedLinesCount:
