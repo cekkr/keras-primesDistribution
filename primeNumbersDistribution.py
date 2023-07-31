@@ -333,7 +333,7 @@ class Agent:
 
               #avgNumberIsolatedLinesCount += score
               if score > avgNumberIsolatedLinesCount:
-                avgNumberIsolatedLinesCount = score
+                avgNumberIsolatedLinesCount = scoreWeight
 
               weight = len(isolatedInstructions)
               weight /= avgNumberIsolatedLines
