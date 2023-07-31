@@ -42,6 +42,7 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, Flatten, Input, Lambda, BatchNormalization, Reshape, GRU, Conv2D, MaxPooling2D, LSTM
 from keras.layers import Activation, Concatenate, AveragePooling2D, GlobalAveragePooling2D, TimeDistributed
 from keras.optimizers import Adam
+from keras.losses import binary_crossentropy
 
 import tensorflow as tf
 
@@ -2039,6 +2040,18 @@ grid_size = 150
 game = Calculon(grid_size)
 input_shape = (grid_size, game.ideWidth, 3)
 
+###
+### General model functions
+
+def weighted_binary_crossentropy(y_true, y_pred):
+    # Calculate the binary cross-entropy loss
+    bce_loss = binary_crossentropy(y_true, y_pred)
+
+    # Assign higher weights to errors where y_true is close to 1
+    weighted_loss = tf.where(y_true < 0.5, bce_loss, 10 * bce_loss)
+
+    return weighted_loss
+
 """## Models
 
 ### DenseNet
@@ -2144,7 +2157,7 @@ def getModelLSTM():
   model = Model(inputs=inputs, outputs=output)
 
   # Compile the model with appropriate loss, optimizer, and metrics
-  model.compile(loss='mean_absolute_error', optimizer='adam') #, metrics=['accuracy']
+  model.compile(loss=weighted_binary_crossentropy, optimizer='adam') #, metrics=['accuracy']
   return model
 
 """## Run"""
