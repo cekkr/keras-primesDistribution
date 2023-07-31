@@ -188,6 +188,9 @@ class Agent:
 
     epoch = 0
 
+    avgNumberIsolatedLines = 1
+    avgNumberIsolatedLinesCount = 1
+
     lastTrain = self.readJson(self.fileTraining)
     if lastTrain != None:
       delta = lastTrain['delta']
@@ -197,9 +200,8 @@ class Agent:
       nb_epoch = lastTrain['nb_epoch']
       observeModel = lastTrain['observeModel']
       limitTrainingCount = lastTrain['limitTrainingCount']
-
-    avgNumberIsolatedLines = 1
-    avgNumberIsolatedLinesCount = 0
+      avgNumberIsolatedLines = lastTrain['avgNumberIsolatedLines']
+      avgNumberIsolatedLinesCount = lastTrain['avgNumberIsolatedLinesCount']
 
     while epoch < nb_epoch:
       epoch += 1
@@ -349,7 +351,9 @@ class Agent:
             'epoch': epoch,
             'nb_epoch': nb_epoch,
             'observeModel': observeModel,
-            'limitTrainingCount': limitTrainingCount
+            'limitTrainingCount': limitTrainingCount,
+            'avgNumberIsolatedLines': avgNumberIsolatedLines,
+            'avgNumberIsolatedLinesCount': avgNumberIsolatedLinesCount
         }
         self.saveJson(self.fileTraining, save)
 
