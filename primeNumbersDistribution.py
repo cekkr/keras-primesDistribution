@@ -66,7 +66,7 @@ if hasattr(np, 'float128'):
 output = open("output.txt", "w")
 lastPrintNewLine = True
 def myPrint(*argv, **kwargs):
-  nonlocal lastPrintNewLine
+  global lastPrintNewLine
 
   print(*argv, **kwargs)
 
