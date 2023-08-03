@@ -155,6 +155,10 @@ class Agent:
     if(os.path.exists(self.fileWeights)):
       model.load_weights(self.fileWeights)
 
+    self.dirOutputs = 'outputs'
+    if not os.path.isdir(self.dirOutputs):
+      os.makedirs(self.dirOutputs)
+
     self.model = model
 
   def get_game_data(self, game):
@@ -223,6 +227,9 @@ class Agent:
       limitTrainingCount = lastTrain['limitTrainingCount']
 
     avgTotalIsolatedLines = game.num_lines / 2
+
+    bestScore = 0
+    bestScoreLines = 0
 
     while epoch < nb_epoch:
       epoch += 1
@@ -319,6 +326,13 @@ class Agent:
           if score >= 0:
             # Train only the working algorithm
             isolatedInstructions = game.curWinnerInstructions
+
+            if score > bestScore or (score == bestScore and bestScoreLines > len(isolatedInstructions)):
+              bestScore = score
+              bestScoreLines = len(isolatedInstructions)
+
+              with open(self.dirOutputs + '/' + str(score) + '.txt', 'w') as file:
+                file.write(json.dumps(isolatedInstructions))
 
             scoreWeight = score
             if weighedScore and score > 0:
