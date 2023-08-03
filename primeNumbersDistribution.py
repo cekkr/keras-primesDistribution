@@ -212,9 +212,6 @@ class Agent:
 
     epoch = 0
 
-    avgNumberIsolatedLines = 1
-    avgNumberIsolatedLinesCount = 0
-
     lastTrain = self.readJson(self.fileTraining)
     if lastTrain != None:
       delta = lastTrain['delta']
@@ -224,8 +221,8 @@ class Agent:
       nb_epoch = lastTrain['nb_epoch']
       observeModel = lastTrain['observeModel']
       limitTrainingCount = lastTrain['limitTrainingCount']
-      avgNumberIsolatedLines = lastTrain['avgNumberIsolatedLines']
-      avgNumberIsolatedLinesCount = lastTrain['avgNumberIsolatedLinesCount']
+
+    avgTotalIsolatedLines = game.num_lines / 2
 
     while epoch < nb_epoch:
       epoch += 1
@@ -298,6 +295,8 @@ class Agent:
           isolatedHashScores[h] = score
           return True
 
+      avgNumberIsolatedLines = 0
+      avgNumberIsolatedLinesCount = 0
 
       cycles = 0
       game_over = False
@@ -323,17 +322,21 @@ class Agent:
 
             scoreWeight = score
             if weighedScore and score > 0:
-              linesWeight = len(isolatedInstructions)*scoreWeight
-              avgNumberIsolatedLines = ((avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + linesWeight)
-              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount + scoreWeight
-              
-              if score > avgNumberIsolatedLinesCount:
-                avgNumberIsolatedLinesCount = scoreWeight
+              lineWeight = len(isolatedInstructions) * score
+              avgNumberIsolatedLines = (avgNumberIsolatedLines*avgNumberIsolatedLinesCount) + lineWeight
+              avgNumberIsolatedLinesCount += score
+              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount
 
               weight = len(isolatedInstructions)
-              weight /= avgNumberIsolatedLines
-              scoreWeight = pow(score, weight)
-              myPrint("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t avgLines:", avgNumberIsolatedLines)
+
+              if weight <= avgTotalIsolatedLines:
+                weight = (1 - (weight / avgTotalIsolatedLines)) * -1
+              else:
+                weight = (weight - avgTotalIsolatedLines) / (game.num_lines - avgTotalIsolatedLines)
+
+              weight *= -1 # is not perfect, but it should work...
+              scoreWeight = (math.sin(score*(math.pi/2))*weight) + (score*(1-weight))
+              myPrint("Lines: ",len(isolatedInstructions),"\t Weight: ", weight, "\t scoreWeight:",scoreWeight , "\t avgLines:", avgNumberIsolatedLines)
 
             for i in range(0, game.countInstructionsElements(isolatedInstructions)):
               view = game.get_state(i+1, isolatedInstructions)
@@ -376,9 +379,7 @@ class Agent:
             'epoch': epoch,
             'nb_epoch': nb_epoch,
             'observeModel': observeModel,
-            'limitTrainingCount': limitTrainingCount,
-            'avgNumberIsolatedLines': float(avgNumberIsolatedLines),
-            'avgNumberIsolatedLinesCount': float(avgNumberIsolatedLinesCount)
+            'limitTrainingCount': limitTrainingCount
         }
         self.saveJson(self.fileTraining, save)
 
@@ -397,6 +398,9 @@ class Agent:
       loss /= cycles
       #loss /= upTo
       accuracy /= cycles
+
+      avgTotalIsolatedLines = (avgTotalIsolatedLines + avgNumberIsolatedLines) / 2
+      myPrint("avgTotalIsolatedLines: ", avgTotalIsolatedLines)
 
       myPrint("=========================================")
       myPrint("Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon, win_count))
