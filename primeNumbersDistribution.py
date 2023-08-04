@@ -267,7 +267,7 @@ class Agent:
           loss += float(train)
           cycles += 1
 
-          if self.checkRamUsage():
+          if self.checkRamUsage() and False: # disable ram regulator
             limitTrainingCount = len(views) * 0.75
             if limitTrainingCount < 1:
               limitTrainingCount = 1
