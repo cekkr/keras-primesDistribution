@@ -1,0 +1,2 @@
+
+currentDir = 'current/'
