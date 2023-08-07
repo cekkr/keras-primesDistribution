@@ -54,6 +54,29 @@ class modelsGenerator:
         self.cur.execute("INSERT INTO dataset (input, target, time) VALUES (?,?,?)", (input, target, time.time()))
         self.cur.commit()
 
+    ###
+    ### Models generator
+    ###
+
+    def defLayers(self):
+        self.availableLayers = []
+
+        self.unitsRange = [5, 10]
+
+        # Dense
+        dense = self.defLayer('dense')
+        dense['layer'] = Dense
+
+        # LSTM
+        lstm = self.defLayer('lstm')
+        
+
+    def defLayer(self, name):
+        layer = {}
+        self.availableLayers.append(layer)
+        layer['name'] = name
+        return layer
+
 ###
 ### General model functions
 ###
@@ -72,7 +95,7 @@ def weighted_binary_crossentropy(y_true, y_pred):
 ### DenseNet
 """
 
-def getModelDenseNet():
+def getModelDenseNet(input_shape):
 
   activation = 'gelu'
 
@@ -141,7 +164,7 @@ def getModelDenseNet():
 
 """### LSTM"""
 
-def getModelLSTM():
+def getModelLSTM(input_shape):
   activation = 'gelu'
   lstm_units = 256
   num_lstm_layers = 4

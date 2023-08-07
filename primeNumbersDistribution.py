@@ -318,7 +318,7 @@ class Agent:
           'bestScore': bestScore,
           'bestScoreLines': bestScoreLines
         }
-        
+
         self.saveJson(self.fileTraining, save)
 
       if game.is_won():
