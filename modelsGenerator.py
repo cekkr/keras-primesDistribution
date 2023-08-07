@@ -69,13 +69,15 @@ class modelsGenerator:
 
         # LSTM
         lstm = self.defLayer('lstm')
-        
+
 
     def defLayer(self, name):
         layer = {}
         self.availableLayers.append(layer)
         layer['name'] = name
         return layer
+
+#todo: Create "Combination" recursive class
 
 ###
 ### General model functions
