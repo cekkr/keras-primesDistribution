@@ -111,24 +111,14 @@ batch_size = 30
 
 class Agent:
 
-  def __init__(self, model, memory=None, nb_frames=None):
-    self.input_shape = model.input_shape[1:]
+  def __init__(self, modelsGen, input_shape, output_shape):
+    self.input_shape = input_shape
     myPrint("input_shape: ", self.input_shape)
 
-    self.output_shape = model.layers[-1].output_shape[1:]
+    self.output_shape = output_shape
     myPrint("output_shape: ", self.output_shape)
 
-    self.fileTraining = config.currentDir + 'lastTraining.json'
-
-    self.fileWeights = config.currentDir + 'weights.dat'
-    if(os.path.exists(self.fileWeights)):
-      model.load_weights(self.fileWeights)
-
-    self.dirOutputs = config.currentDir + 'outputs'
-    if not os.path.isdir(self.dirOutputs):
-      os.makedirs(self.dirOutputs)
-
-    self.model = model
+    self.modelsGen = modelsGen
 
   def get_game_data(self, game):
     frame = game.get_frame()
@@ -165,7 +155,200 @@ class Agent:
     usedRam = psutil.virtual_memory()[2] # in %
     return usedRam > 75
 
-  def train(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., 0], epsilon_rate=3/4, observe=0, checkpoint=10, weighedScore = True):
+  def train(self, game, nb_epoch=2000, epsilon=[1., 0], epsilon_rate=3 / 4, observe=0, checkpoint=10, weighedScore=True):
+    if type(epsilon) in {tuple, list}:
+      delta = ((epsilon[0] - epsilon[1]) / (nb_epoch * epsilon_rate))
+      final_epsilon = epsilon[1]
+      epsilon = epsilon[0]
+    else:
+      final_epsilon = epsilon
+
+    model = self.model
+    win_count = 0
+
+    observeModel = False
+    totEpochs = nb_epoch
+    minEpochsControl = totEpochs / 10
+    limitTrainingCount = 99999
+
+    epoch = 0
+
+    avgTotalIsolatedLines = game.num_lines / 2
+
+    bestScore = 0
+    bestScoreLines = 0
+
+    lastTrain = self.readJson(self.fileTraining)
+    if lastTrain != None:
+      delta = lastTrain['delta']
+      epsilon = lastTrain['epsilon']
+      final_epsilon = lastTrain['final_epsilon']
+      epoch = lastTrain['epoch']
+      nb_epoch = lastTrain['nb_epoch']
+      observeModel = lastTrain['observeModel']
+      limitTrainingCount = lastTrain['limitTrainingCount']
+      avgTotalIsolatedLines = lastTrain['avgTotalIsolatedLines']
+      bestScore = lastTrain['bestScore']
+      bestScoreLines = lastTrain['bestScoreLine']
+
+
+    while epoch < nb_epoch:
+      epoch += 1
+
+      loss = 0.
+      accuracy = 0.
+
+      game.reset()
+
+      ### Saved scores
+      ###
+      linesScores = [0] * (game.num_lines + 1)
+      isolatedHashScores = {}
+
+      def getArrHash(arr):
+        return hash(arr.tobytes())
+
+      def checkViewScore(view, score):
+        h = getArrHash(view)
+        if h in isolatedHashScores:
+          s = isolatedHashScores[h]
+
+          if s < score:
+            isolatedHashScores[h] = score
+            return True
+          else:
+            return False
+        else:
+          isolatedHashScores[h] = score
+          return True
+
+      ### End saved scores
+      ###
+
+      avgNumberIsolatedLines = 0
+      avgNumberIsolatedLinesCount = 0
+
+      cycles = 0
+      game_over = False
+      while not game_over:
+
+        options = game.optionsLen
+        if np.random.random() < epsilon or epoch < observe:
+          a = int(np.random.randint(options))
+        else:
+          p = self.predictOptions(game)
+          a = int(np.argmax(p))
+
+        game.goDown(a)
+
+        game.goRight()  # next parameter
+
+        if game.inNewLine:
+          score = game.get_score()
+
+          if score >= 0:
+            # Train only the working algorithm
+            isolatedInstructions = game.curWinnerInstructions
+
+            if score > bestScore or (score == bestScore and bestScoreLines > len(isolatedInstructions)):
+              bestScore = score
+              bestScoreLines = len(isolatedInstructions)
+
+              with open(self.dirOutputs + '/' + str(score) + '.txt', 'w') as file:
+                file.write(json.dumps(isolatedInstructions))
+
+            scoreWeight = score
+            if weighedScore and score > 0:
+              lineWeight = len(isolatedInstructions) * score
+              avgNumberIsolatedLines = (avgNumberIsolatedLines * avgNumberIsolatedLinesCount) + lineWeight
+              avgNumberIsolatedLinesCount += score
+              avgNumberIsolatedLines /= avgNumberIsolatedLinesCount
+
+              weight = len(isolatedInstructions)
+
+              if weight <= avgTotalIsolatedLines:
+                weight = (1 - (weight / avgTotalIsolatedLines)) * -1
+              else:
+                weight = (weight - avgTotalIsolatedLines) / (game.num_lines - avgTotalIsolatedLines)
+
+              weight *= -1  # is not perfect, but it should work...
+              scoreWeight = (math.sin(score * (math.pi / 2)) * weight) + (score * (1 - weight))
+              myPrint("Lines: ", len(isolatedInstructions), "\t Weight: ", weight, "\t scoreWeight:", scoreWeight,
+                      "\t avgLines:", avgNumberIsolatedLines)
+
+            for i in range(0, game.countInstructionsElements(isolatedInstructions)):
+              view = game.get_state(i + 1, isolatedInstructions)
+              if checkViewScore(view, scoreWeight):
+                modelsGen.trainInput(view, scoreWeight)
+
+            # Save working lines max score
+            for i in game.workingLines:
+              if linesScores[i] < scoreWeight:
+                linesScores[i] = scoreWeight
+
+          game_over = game.is_over()
+
+      # Train the best scores of the total script
+      totElements = 0
+      for i in range(0, len(game.instructions)):
+        instr = game.instructions[i]
+        instrLen = len(instr)
+
+        if linesScores[i] > 0:
+          for u in range(totElements, totElements + instrLen):
+            view = game.get_state(u + 1)
+            modelsGen.trainInput(view, linesScores[i])
+
+        totElements += instrLen
+
+      gc.collect()
+
+      if checkpoint and ((epoch + 1 - observe) % checkpoint == 0 or epoch >= nb_epoch):
+        model.save_weights(self.fileWeights)
+
+        save = {
+          'delta': delta,
+          'epsilon': epsilon,
+          'final_epsilon': final_epsilon,
+          'epoch': epoch,
+          'nb_epoch': nb_epoch,
+          'observeModel': observeModel,
+          'limitTrainingCount': limitTrainingCount,
+          'avgTotalIsolatedLines': avgTotalIsolatedLines,
+          'bestScore': bestScore,
+          'bestScoreLines': bestScoreLines
+        }
+        
+        self.saveJson(self.fileTraining, save)
+
+      if game.is_won():
+        win_count += 1
+
+      if epsilon > final_epsilon and epoch >= observe:
+        epsilon -= delta
+
+        if not observeModel and epsilon < delta:
+          if (nb_epoch - epoch) < minEpochsControl:
+            nb_epoch = minEpochsControl
+            epoch = 0
+          observeModel = True
+
+      loss /= cycles
+      # loss /= upTo
+      accuracy /= cycles
+
+      avgTotalIsolatedLines = (avgTotalIsolatedLines + avgNumberIsolatedLines) / 2
+      myPrint("avgTotalIsolatedLines: ", avgTotalIsolatedLines)
+
+      myPrint("=========================================")
+      myPrint(
+        "Epoch {:03d}/{:03d} | Loss {:.4f} | Epsilon {:.2f} | Win count {}".format(epoch + 1, nb_epoch, loss, epsilon,
+                                                                                   win_count))
+      myPrint("=========================================")
+
+
+
+  def trainOld(self, game, nb_epoch=2000, gamma=0.9, epsilon=[1., 0], epsilon_rate=3/4, observe=0, checkpoint=10, weighedScore = True):
 
     if type(epsilon)  in {tuple, list}:
       delta =  ((epsilon[0] - epsilon[1]) / (nb_epoch * epsilon_rate))

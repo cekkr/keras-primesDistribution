@@ -1,15 +1,16 @@
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras.layers import Dense, Flatten, Input, Lambda, BatchNormalization, Reshape, GRU, Conv2D, MaxPooling2D, LSTM
 from keras.layers import Activation, Concatenate, AveragePooling2D, GlobalAveragePooling2D, TimeDistributed
 from keras.optimizers import Adam
 from keras.losses import binary_crossentropy
-
 import tensorflow as tf
 
 import sqlite3
+import os
+import json
+import time
 
 import config
-
 
 class modelsGenerator:
 
@@ -24,12 +25,34 @@ class modelsGenerator:
 
     def initDB(self):
         if not self.tableExists('dataset'):
-            self.cur.execute("CREATE TABLE dataset(id INTEGER NOT NULL PRIMARY KEY, input TEXT, target TEXT)")
+            self.cur.execute("CREATE TABLE dataset(id INTEGER NOT NULL PRIMARY KEY, input TEXT, target TEXT, time INTEGER)")
 
     def tableExists(self, name):
         sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='"+name+"'"
         res = self.cur.execute(sql).fetchone()
         return res is not None
+
+    def loadModel(self):
+        model = load_model(config.currentDir + 'model.h5')
+
+        self.fileTraining = config.currentDir + 'lastTraining.json'
+
+        self.fileWeights = config.currentDir + 'weights.dat'
+        if (os.path.exists(self.fileWeights)):
+            model.load_weights(self.fileWeights)
+
+        self.dirOutputs = config.currentDir + 'outputs'
+        if not os.path.isdir(self.dirOutputs):
+            os.makedirs(self.dirOutputs)
+
+        self.model = model
+
+    def trainInput(self, input, target):
+        input = json.dumps(input)
+        target = json.dumps(target)
+
+        self.cur.execute("INSERT INTO dataset (input, target, time) VALUES (?,?,?)", (input, target, time.time()))
+        self.cur.commit()
 
 ###
 ### General model functions
