@@ -1,3 +1,4 @@
+import keras.layers
 from keras.models import Sequential, Model, load_model
 from keras.layers import Dense, Flatten, Input, Lambda, BatchNormalization, Reshape, GRU, Conv2D, MaxPooling2D, LSTM
 from keras.layers import Activation, Concatenate, AveragePooling2D, GlobalAveragePooling2D, TimeDistributed
@@ -58,26 +59,90 @@ class modelsGenerator:
     ### Models generator
     ###
 
-    def defLayers(self):
-        self.availableLayers = []
+    def initGenerator(self):
+        self.defCombinations()
+        self.resetCombinations()
 
-        self.unitsRange = [5, 10]
+    def resetCombinations(self):
+        self.unitsRange = [5, 10]  # 32 - 1024
+
+    def generateModel(self):
+        layer = self.getLayer()
+
+    def getLayer(self):
+        for layer in self.layers:
+            if layer.surface:
+                return layer
+
+    ###
+    ### Define combinations
+    ###
+    def defCombinations(self):
+        self.defActivations()
+        self.defLayers()
+
+    def defActivations(self):
+        self.activations = []
+
+        sigmoid = self.defActivation('sigmoid')
+        sigmoid.default = 'sigmoid'
+
+        sigmoid = self.defActivation('relu')
+        sigmoid.default = 'relu'
+
+        sigmoid = self.defActivation('gelu')
+        sigmoid.default = 'gelu'
+
+        sigmoid = self.defActivation('linear')
+        sigmoid.default = 'linear'
+
+        sigmoid = self.defActivation('softmax')
+        sigmoid.default = 'softmax'
+
+    def defActivation(self, name):
+        act = Combination(name, 'activation')
+        self.activations.append(act)
+
+    def defLayers(self):
+        self.layers = []
 
         # Dense
         dense = self.defLayer('dense')
-        dense['layer'] = Dense
+        dense.instance = Dense
 
         # LSTM
         lstm = self.defLayer('lstm')
+        lstm.instance = LSTM
 
+        # Concatenate
+        concatenate = self.defLayer('concatenate')
+        concatenate.instance = keras.layers.Concatenate
+        concatenate.surface = False
 
     def defLayer(self, name):
-        layer = {}
-        self.availableLayers.append(layer)
-        layer['name'] = name
-        return layer
+        layer = Combination(name, 'layer')
+        self.layers.append(layer)
+
 
 #todo: Create "Combination" recursive class
+class Combination:
+    def __init__(self, name, type):
+        self.name = name
+
+        self.type = type
+        self.defType()
+
+        self.surface = True
+
+    def defType(self):
+        match self.type:
+            case 'layer':
+                self.defTypeLayer()
+
+    def defTypeLayer(self):
+        self.options = [
+            'units'
+        ]
 
 ###
 ### General model functions
