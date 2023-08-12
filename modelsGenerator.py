@@ -65,6 +65,7 @@ class modelsGenerator:
 
     def resetCombinations(self):
         self.unitsRange = [5, 10]  # 32 - 1024
+        self.combinationsManager = CombinationManager(self.combinations, 'layer')
 
     def generateModel(self):
         layer = self.getLayer()
@@ -78,11 +79,14 @@ class modelsGenerator:
     ### Define combinations
     ###
     def defCombinations(self):
+        self.combinations = {}
+
         self.defActivations()
         self.defLayers()
 
     def defActivations(self):
         self.activations = []
+        self.combinations['activation'] = self.activations
 
         sigmoid = self.defActivation('sigmoid')
         sigmoid.default = 'sigmoid'
@@ -105,6 +109,7 @@ class modelsGenerator:
 
     def defLayers(self):
         self.layers = []
+        self.combinations['layer'] = self.layers
 
         # Dense
         dense = self.defLayer('dense')
@@ -141,8 +146,14 @@ class Combination:
 
     def defTypeLayer(self):
         self.options = [
-            'units'
+            'units',
+            'activation'
         ]
+
+class CombinationManager:
+    def __init__(self, options, base):
+        self.options = options
+        self.base = base
 
 ###
 ### General model functions
