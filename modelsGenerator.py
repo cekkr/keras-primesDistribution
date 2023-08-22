@@ -65,7 +65,7 @@ class modelsGenerator:
 
     def resetCombinations(self):
         self.unitsRange = [5, 10]  # 32 - 1024
-        self.combinationsManager = CombinationManager(self.combinations, 'layer')
+        self.combinationsManager = CombinationManager(self.cur, self.combinations, 'layer')
 
     def generateModel(self):
         layer = self.getLayer()
@@ -151,9 +151,15 @@ class Combination:
         ]
 
 class CombinationManager:
-    def __init__(self, options, base):
+    def __init__(self, cursor, options, base):
+        self.cur = cursor
         self.options = options
         self.base = base
+        self.models = []
+
+    def generateModels(self):
+        if len(self.models) == 0:
+            print("generate base models")
 
 ###
 ### General model functions
