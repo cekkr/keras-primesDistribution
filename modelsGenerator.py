@@ -28,6 +28,10 @@ class modelsGenerator:
         if not self.tableExists('dataset'):
             self.cur.execute("CREATE TABLE dataset(id INTEGER NOT NULL PRIMARY KEY, input TEXT, target TEXT, time INTEGER)")
 
+        if not self.tableExists('combination'):
+            self.cur.execute("CREATE TABLE combination(id INTEGER NOT NULL PRIMARY KEY, descriptor TEXT, complete INTEGER, score REAL)")
+
+
     def tableExists(self, name):
         sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='"+name+"'"
         res = self.cur.execute(sql).fetchone()
@@ -64,7 +68,7 @@ class modelsGenerator:
         self.resetCombinations()
 
     def resetCombinations(self):
-        self.unitsRange = [5, 10]  # 32 - 1024
+        #self.unitsRange = [5, 10]  # 32 - 1024
         self.combinationsManager = CombinationManager(self.cur, self.combinations, 'layer')
 
     def generateModel(self):
