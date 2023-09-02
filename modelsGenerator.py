@@ -29,7 +29,7 @@ class modelsGenerator:
             self.cur.execute("CREATE TABLE dataset(id INTEGER NOT NULL PRIMARY KEY, input TEXT, target TEXT, time INTEGER)")
 
         if not self.tableExists('combination'):
-            self.cur.execute("CREATE TABLE combination(id INTEGER NOT NULL PRIMARY KEY, descriptor TEXT, complete INTEGER, score REAL)")
+            self.cur.execute("CREATE TABLE combination(id INTEGER NOT NULL PRIMARY KEY, descriptor TEXT, value TEXT, score REAL, parent INTEGER)")
 
 
     def tableExists(self, name):
