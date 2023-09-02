@@ -12,6 +12,8 @@ import json
 import time
 
 import config
+from db import DB
+
 
 class modelsGenerator:
 
@@ -21,6 +23,8 @@ class modelsGenerator:
 
         self.con = sqlite3.connect(config.currentDir + "dataset.db")
         self.cur = self.con.cursor()
+
+        self.db = DB(config.currentDir + "dataset.db")
 
         self.initDB()
 
