@@ -35,6 +35,18 @@ class modelsGenerator:
         if not self.tableExists('combination'):
             self.cur.execute("CREATE TABLE combination(id INTEGER NOT NULL PRIMARY KEY, descriptor TEXT, value TEXT, score REAL, parent INTEGER)")
 
+        if not self.db.exists('dataset'):
+            dataset = self.db.get('dataset')
+            dataset.input = 'TEXT'
+            dataset.target = 'TEXT'
+            dataset.time = 'INTEGER'
+
+        if not self.db.exists('combination'):
+            dataset = self.db.get('combination')
+            dataset.descriptor = 'TEXT'
+            dataset.value = 'TEXT'
+            dataset.score = 'REAL'
+            dataset.parent = 'INTEGER'
 
     def tableExists(self, name):
         sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='"+name+"'"
