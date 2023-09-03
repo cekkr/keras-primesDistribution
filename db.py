@@ -28,3 +28,7 @@ class Table:
     def _create(self):
         self.id = 'INTEGER NOT NULL PRIMARY KEY'
         #todo: create table
+
+    def insert(self, **kwargs):
+        for k,v in kwargs.items():
+            print(k,v)
