@@ -20,6 +20,7 @@ class DB:
 class Table:
     def __init(self, db, name):
         self.db = db
+        self.name = name
         self.cols = {}
 
     def __setattr__(self, name, value):
@@ -30,5 +31,19 @@ class Table:
         #todo: create table
 
     def insert(self, **kwargs):
+        tup = ()
+        cols = ""
+        what = ""
+
         for k,v in kwargs.items():
-            print(k,v)
+            if len(cols) > 0:
+                cols += ", "
+                what += ", "
+
+            cols += k
+            what += "?"
+
+            tup.append(v)
+
+        self.db.cur.execute("INSERT INTO "+self.name+" ("+cols+") VALUES ("+what+")", tup)
+        self.db.cur.commit()
