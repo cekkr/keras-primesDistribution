@@ -17,6 +17,9 @@ class DB:
 
         return self.tables[name]
 
+    def __getattr__(self, item):
+        return self.get(item)
+
 class Table:
     def __init(self, db, name):
         self.db = db

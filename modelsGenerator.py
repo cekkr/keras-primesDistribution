@@ -21,19 +21,20 @@ class modelsGenerator:
         self.inputShape = inputShape
         self.outputShape = outputShape
 
-        self.con = sqlite3.connect(config.currentDir + "dataset.db")
-        self.cur = self.con.cursor()
+        #self.con = sqlite3.connect(config.currentDir + "dataset.db")
+        #self.cur = self.con.cursor()
 
         self.db = DB(config.currentDir + "dataset.db")
-
         self.initDB()
 
     def initDB(self):
+        '''
         if not self.tableExists('dataset'):
             self.cur.execute("CREATE TABLE dataset(id INTEGER NOT NULL PRIMARY KEY, input TEXT, target TEXT, time INTEGER)")
 
         if not self.tableExists('combination'):
             self.cur.execute("CREATE TABLE combination(id INTEGER NOT NULL PRIMARY KEY, descriptor TEXT, value TEXT, score REAL, parent INTEGER)")
+        '''
 
         if not self.db.exists('dataset'):
             dataset = self.db.get('dataset')
@@ -51,11 +52,6 @@ class modelsGenerator:
             dataset.parent = 'INTEGER'
 
             dataset.create()
-
-    def tableExists(self, name):
-        sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='"+name+"'"
-        res = self.cur.execute(sql).fetchone()
-        return res is not None
 
     def loadModel(self):
         model = load_model(config.currentDir + 'model.h5')
@@ -76,8 +72,10 @@ class modelsGenerator:
         input = json.dumps(input)
         target = json.dumps(target)
 
-        self.cur.execute("INSERT INTO dataset (input, target, time) VALUES (?,?,?)", (input, target, time.time()))
-        self.cur.commit()
+        #self.cur.execute("INSERT INTO dataset (input, target, time) VALUES (?,?,?)", (input, target, time.time()))
+        #self.cur.commit()
+
+        self.db.dataset.insert(input=input, target=target, time=time.time())
 
     ###
     ### Models generator
