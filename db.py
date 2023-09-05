@@ -24,11 +24,20 @@ class Table:
         self.cols = {}
 
     def __setattr__(self, name, value):
+        if len(self.cols) == 0:
+            self.cols['id'] = 'INTEGER NOT NULL PRIMARY KEY'
+
         self.cols[name] = value
 
-    def _create(self):
-        self.id = 'INTEGER NOT NULL PRIMARY KEY'
-        #todo: create table
+    def create(self):
+        query = 'CREATE TABLE ' + self.name + ' ('
+
+        for k, v in self.cols.items():
+            query += k + ' ' + v
+
+        query += ')'
+
+        self.db.cur.execute(query)
 
     def insert(self, **kwargs):
         tup = ()

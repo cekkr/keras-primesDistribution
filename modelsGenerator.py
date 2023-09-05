@@ -41,12 +41,16 @@ class modelsGenerator:
             dataset.target = 'TEXT'
             dataset.time = 'INTEGER'
 
+            dataset.create()
+
         if not self.db.exists('combination'):
             dataset = self.db.get('combination')
             dataset.descriptor = 'TEXT'
             dataset.value = 'TEXT'
             dataset.score = 'REAL'
             dataset.parent = 'INTEGER'
+
+            dataset.create()
 
     def tableExists(self, name):
         sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='"+name+"'"
