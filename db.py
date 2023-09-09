@@ -64,6 +64,7 @@ class QueryBuilder:
     def __init__(self, db, table=None):
         self.db = db
         self.table = table
+        self.where = QueryBuilderSetter()
 
     @type.setter
     def type(self, val):
@@ -73,6 +74,13 @@ class QueryBuilder:
     def what(self, val):
         self.what = val
 
-    @where.setter
-    def where(self, val):
-        self.where = val
+    @property
+    def where(self):
+        return self.where
+
+class QueryBuilderSetter:
+    def __init__(self):
+        self.vals = {}
+
+    def __setattr__(self, item, val):
+        self.vals[item] = val
