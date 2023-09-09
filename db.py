@@ -59,3 +59,20 @@ class Table:
 
         self.db.cur.execute("INSERT INTO "+self.name+" ("+cols+") VALUES ("+what+")", tup)
         self.db.cur.commit()
+
+class QueryBuilder:
+    def __init__(self, db, table=None):
+        self.db = db
+        self.table = table
+
+    @type.setter
+    def type(self, val):
+        self.type = val
+
+    @what.setter
+    def what(self, val):
+        self.what = val
+
+    @where.setter
+    def where(self, val):
+        self.where = val
