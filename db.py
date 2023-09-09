@@ -78,6 +78,11 @@ class QueryBuilder:
     def where(self):
         return self.where
 
+    @where.setter
+    def where(self, val):
+        self.where = val
+
+
 class QueryBuilderSetter:
     def __init__(self):
         self.vals = {}
