@@ -60,15 +60,27 @@ class Table:
         self.db.cur.execute("INSERT INTO "+self.name+" ("+cols+") VALUES ("+what+")", tup)
         self.db.cur.commit()
 
+    def query(self):
+        return QueryBuilder(self.db, self.name)
+
 class QueryBuilder:
     def __init__(self, db, table=None):
         self.db = db
         self.table = table
         self.where = QueryBuilderSetter()
+        self.quests = []
+
+    @property
+    def type(self):
+        return self.type
 
     @type.setter
     def type(self, val):
         self.type = val
+
+    @property
+    def what(self):
+        return self.what
 
     @what.setter
     def what(self, val):
@@ -82,10 +94,30 @@ class QueryBuilder:
     def where(self, val):
         self.where = val
 
+    def build(self):
+        q = ''
+        if self.type == 'SELECT':
+            q += self.type + ' '
+            q += self.what + ' '
+
+            # WHERE
+            q += 'WHERE '
+            for k in self.where.ord:
+                if k in self.where.vals:
+                    q += k + '? '
+                    self.quests.append(self.where.vals[k])
+                else:
+                    q += k
+
 
 class QueryBuilderSetter:
     def __init__(self):
         self.vals = {}
+        self.ord = []
 
     def __setattr__(self, item, val):
         self.vals[item] = val
+        self.ord.append(item)
+
+    def then(self, then):
+        self.ord.append(then)
