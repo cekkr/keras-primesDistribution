@@ -50,6 +50,19 @@ When training the model, you will need to provide appropriate training data for 
 
 Remember to preprocess your data appropriately before feeding it into the model. The specific architecture and hyperparameters will depend on the complexity of your game and the nature of the hidden information.
 
+
+### About flatten layer
+The structure of the input array does matter for a Keras model. The shape of the input data must match the input shape expected by the first layer of the model. Keras models are not indifferent to the input shape; it needs to be compatible with the network architecture.
+
+For example, if your first layer is a convolutional layer, the input data should have a shape representing `(batch_size, height, width, channels)` where `batch_size` is the number of samples in your batch, `height` and `width` are the dimensions of your input images, and `channels` is the number of color channels (e.g., 3 for RGB images).
+
+Flattening is a specific operation that converts multi-dimensional data into a one-dimensional array. It's commonly used when you transition from convolutional layers to dense layers in a neural network. For instance, if you have a convolutional layer producing output of shape `(batch_size, height, width, channels)`, you typically flatten this into a shape of `(batch_size, height * width * channels)` before feeding it into a dense layer.
+
+When you design your model, make sure the input shape specified in the first layer matches the shape of your input data. If you're dealing with images, convolutional layers are often used early in the model, and the input data shape would typically be `(height, width, channels)`. The need for flattening generally arises when transitioning from convolutional layers to dense layers.
+
+So, to answer your question: No, it's not necessary to always flatten the input array. The structure of the input array should align with the expectations of your model's architecture, and flattening is a specific operation that's applied when needed, typically when transitioning from convolutional layers to dense layers.
+
+
 ## Inspirations
 
 ### BigFloat
